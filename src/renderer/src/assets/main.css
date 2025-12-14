@@ -1,15 +1,71 @@
 @import 'tailwindcss';
 @import './base.css';
 
+/* --- MAJOR CHANGES START HERE --- */
+
 body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  /* * REMOVED: display: flex, align-items: center, justify-content: center 
+     * Rationale: We no longer want to center a single element in the middle of the screen.
+     */
+  display: block; /* Use standard block flow */
+  overflow: auto; /* Allow scrolling if content exceeds screen height */
+  overflow-x: hidden; /* Prevent horizontal scrollbars */
+  user-select: none;
+
+  /* BACKGROUND ADJUSTMENTS: Keep the background full screen */
   background-image: url('./wavy-lines.svg');
   background-size: cover;
-  user-select: none;
+  background-attachment: fixed; /* Optional: Fixes background image position */
+  min-height: 100vh; /* Ensure body takes full viewport height */
 }
+
+#root {
+  /* * Rationale: Remove centering and make the root element fill the entire viewport. 
+     * The login/signup forms inside will manage their own centering.
+     */
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0; /* Remove fixed margin */
+  padding: 0;
+}
+
+/* --- Keep the original utility styles below, but adjust .versions --- */
+
+.versions {
+  /* Rationale: Since the main app view will take the full screen, 
+     * the versions list should be moved out of the absolute bottom position 
+     * or contained within the main dashboard layout. 
+     * Temporarily disabling the fixed position for better flow. 
+     */
+  position: static; /* Change from 'absolute' to 'static' */
+  margin-top: 30px; /* Add some space above the versions list */
+  /* All other version styling is kept for now */
+  bottom: unset;
+  padding: 15px 0;
+  font-family: 'Menlo', 'Lucida Console', monospace;
+  display: inline-flex;
+  overflow: hidden;
+  align-items: center;
+  border-radius: 22px;
+  background-color: #202127;
+  backdrop-filter: blur(24px);
+}
+
+.versions li {
+  display: block;
+  float: left;
+  border-right: 1px solid var(--ev-c-gray-1);
+  padding: 0 20px;
+  font-size: 14px;
+  line-height: 14px;
+  opacity: 0.8;
+  &:last-child {
+    border: none;
+  }
+}
+
+/* --- Keep the original boilerplate styles for codes, logos, text, and actions --- */
 
 code {
   font-weight: 600;
@@ -25,14 +81,6 @@ code {
     Liberation Mono,
     monospace;
   font-size: 85%;
-}
-
-#root {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  margin-bottom: 80px;
 }
 
 .logo {
@@ -115,33 +163,6 @@ code {
   border-color: var(--ev-button-alt-hover-border);
   color: var(--ev-button-alt-hover-text);
   background-color: var(--ev-button-alt-hover-bg);
-}
-
-.versions {
-  position: absolute;
-  bottom: 30px;
-  margin: 0 auto;
-  padding: 15px 0;
-  font-family: 'Menlo', 'Lucida Console', monospace;
-  display: inline-flex;
-  overflow: hidden;
-  align-items: center;
-  border-radius: 22px;
-  background-color: #202127;
-  backdrop-filter: blur(24px);
-}
-
-.versions li {
-  display: block;
-  float: left;
-  border-right: 1px solid var(--ev-c-gray-1);
-  padding: 0 20px;
-  font-size: 14px;
-  line-height: 14px;
-  opacity: 0.8;
-  &:last-child {
-    border: none;
-  }
 }
 
 @media (max-width: 720px) {

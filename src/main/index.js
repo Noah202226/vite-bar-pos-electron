@@ -6,6 +6,68 @@ import { connectDB } from './db/connection'
 
 import { registerIpcHandlers } from './ipc-handlers'
 
+// --- NEW: Function to create the Add Product window ---
+function createAddProductWindow() {
+  const addProductWindow = new BrowserWindow({
+    width: 600,
+    height: 700,
+    show: false, // Don't show until ready
+    title: 'Add New Product',
+    parent: global.mainWindow, // Link it to the main window (optional)
+    modal: true, // Prevents interaction with the main window until closed (optional)
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  // Load the same renderer entry point. Vite's routing will handle which component to show.
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    addProductWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/#/add-product')
+  } else {
+    addProductWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+      hash: '/add-product'
+    })
+  }
+
+  addProductWindow.on('ready-to-show', () => {
+    addProductWindow.show()
+  })
+
+  return addProductWindow
+}
+
+// --- NEW: Function to create the Settings window ---
+function createSettingsWindow() {
+  const settingsWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    show: false,
+    title: 'Application Settings and Admin Panel',
+    parent: global.mainWindow,
+    modal: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  // Load the same renderer entry point, but with a new hash route
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    settingsWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/#/settings')
+  } else {
+    settingsWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/settings' })
+  }
+
+  settingsWindow.on('ready-to-show', () => {
+    settingsWindow.show()
+    // Maaari mo ring buksan ang DevTools para sa debugging:
+    // settingsWindow.webContents.openDevTools()
+  })
+
+  return settingsWindow
+}
+
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -55,12 +117,23 @@ app.whenReady().then(() => {
   // 1. REGISTER IPC HANDLERS HERE
   registerIpcHandlers() // <--- CRITICAL: CALL THE FUNCTION HERE
 
+  // 2. REGISTER THE NEW WINDOW HANDLER HERE <--- MOVED TO THIS LOCATION
+  ipcMain.handle('window:open-add-product', () => {
+    createAddProductWindow()
+  })
+
+  // 3. NEW: IPC Handler for Settings Window
+  ipcMain.handle('window:open-settings', () => {
+    // <--- NEW HANDLER
+    createSettingsWindow()
+  })
+
   connectDB()
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  createWindow()
+  global.mainWindow = createWindow()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
@@ -77,6 +150,3 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.

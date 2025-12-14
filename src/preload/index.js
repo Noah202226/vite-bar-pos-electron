@@ -4,7 +4,21 @@ import { electronAPI } from '@electron-toolkit/preload'
 // Custom APIs for renderer
 const api = {
   getProducts: () => ipcRenderer.invoke('db:get-products'),
-  addProduct: (product) => ipcRenderer.invoke('db:add-product', product)
+  addProduct: (product) => ipcRenderer.invoke('db:add-product', product),
+
+  // Auth handlers <--- NEW
+  checkSession: () => ipcRenderer.invoke('auth:check-session'),
+  login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
+  signup: (userData) => ipcRenderer.invoke('auth:signup', userData),
+  logout: () => ipcRenderer.invoke('auth:logout'),
+
+  // Window Handlers
+  openAddProductWindow: () => ipcRenderer.invoke('window:open-add-product'),
+  openSettingsWindow: () => ipcRenderer.invoke('window:open-settings'),
+
+  // --- NEW DATABASE HANDLERS FOR CATEGORIES ---
+  getCategories: () => ipcRenderer.invoke('db:get-categories'),
+  addCategory: (name) => ipcRenderer.invoke('db:add-category', name)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
