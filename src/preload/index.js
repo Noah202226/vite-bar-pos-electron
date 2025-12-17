@@ -18,12 +18,15 @@ const api = {
 
   // --- NEW DATABASE HANDLERS FOR CATEGORIES ---
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
-  addCategory: (name) => ipcRenderer.invoke('db:add-category', name)
+  addCategory: (name) => ipcRenderer.invoke('db:add-category', name),
+
+  sendToPrinter: (data) => ipcRenderer.send('print-receipt', data)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)

@@ -1,4 +1,5 @@
 import Header from './Header'
+import ReceiptButton from './PrintButton'
 import ProductGrid from './ProductGrid' // <--- NEW IMPORT
 // import OrderCart from './OrderCart'  // Next step!
 
@@ -16,6 +17,7 @@ export default function Dashboard({ user, onLogout }) {
           {/* Placeholder for the OrderCart component */}
           <div className="h-full border border-dashed p-4 text-gray-500">
             Build OrderCart.jsx here!
+            <ReceiptButton />
           </div>
         </div>
 
