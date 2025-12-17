@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { Product } from './db/models/Product'
 import { User } from './db/models/User'
 import { Category } from './db/models/Category'
+import { Order } from './db/models/Order'
 
 export function registerIpcHandlers() {
   // Handler to fetch all products
@@ -146,6 +147,41 @@ export function registerIpcHandlers() {
         return { error: 'Category already exists.' }
       }
       return { error: 'Failed to add category' }
+    }
+  })
+
+  // Get active order for a table or create one
+  ipcMain.handle('db:get-table-order', async (event, tableNumber) => {
+    try {
+      let order = await Order.findOne({ tableNumber, status: 'open' }).lean()
+
+      if (!order) {
+        // Create a new order if it's a fresh table
+        order = new Order({ tableNumber, items: [], status: 'open' })
+        await order.save()
+        return order.toObject()
+      }
+      return order
+    } catch (error) {
+      return { error: 'Failed to sync table order' }
+    }
+  })
+
+  // Update order items
+  ipcMain.handle('db:update-order-items', async (event, { orderId, items }) => {
+    try {
+      const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+      const total = subtotal // Add tax logic here if needed
+
+      const updatedOrder = await Order.findByIdAndUpdate(
+        orderId,
+        { items, subtotal, total },
+        { new: true }
+      ).lean()
+
+      return { success: true, order: updatedOrder }
+    } catch (error) {
+      return { error: 'Failed to update order' }
     }
   })
 }
