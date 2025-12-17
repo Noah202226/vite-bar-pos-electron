@@ -129,66 +129,39 @@ app.whenReady().then(() => {
     createSettingsWindow()
   })
 
+  ipcMain.handle('print-html', async (_, html) => {
+    const printWindow = new BrowserWindow({
+      width: 300,
+      height: 600,
+      show: false,
+      webPreferences: {
+        sandbox: false
+      }
+    })
+
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+
+    printWindow.webContents.print(
+      {
+        silent: true,
+        printBackground: true,
+        margins: { marginType: 'none' },
+        scaleFactor: 100, // 👈 prevent auto scaling
+        pageSize: {
+          width: 58000,
+          height: 200000
+        }
+      },
+      () => {
+        printWindow.close()
+      }
+    )
+  })
+
   connectDB()
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
-
-  ipcMain.on('print-receipt', async (event, payload) => {
-    const options = {
-      preview: false,
-      width: '160px', // Reduced width to ensure it fits 58mm
-      margin: '0 0 0 0',
-      copies: 1,
-      printerName: payload.printerName,
-      silent: true,
-      timeOutPerLine: 1000 // Increase timeout for complex content
-    }
-
-    const content = [
-      {
-        type: 'text',
-        value: 'OFFICIAL RECEIPT',
-        style: {
-          color: '#000', // MUST BE BLACK
-          fontWeight: '700',
-          textAlign: 'center',
-          fontSize: '20px'
-        }
-      },
-      {
-        type: 'text',
-        value: '--------------------------------',
-        style: { color: '#000', textAlign: 'center' }
-      },
-      {
-        type: 'table',
-        style: { color: '#000', fontSize: '12px' },
-        tableHeader: ['Item', 'Qty', 'Total'],
-        tableBody: payload.items.map((item) => [item.name, '1', `$${item.price}`]),
-        tableFooter: ['TOTAL', '', `$${payload.total}`],
-        tableHeaderStyle: { color: '#000', fontWeight: '700' },
-        tableBodyStyle: { color: '#000' },
-        tableFooterStyle: { color: '#000', fontWeight: '700' }
-      },
-      {
-        type: 'qrCode',
-        value: 'Receipt-ID-12345',
-        height: 80,
-        width: 80,
-        position: 'center',
-        style: { marginTop: '10px' }
-      }
-    ]
-
-    try {
-      // Crucial: Use the correct printer name
-      await PosPrinter.print(content, options)
-      console.log('Print job sent successfully')
-    } catch (error) {
-      console.error('Print Error:', error)
-    }
-  })
 
   global.mainWindow = createWindow()
 

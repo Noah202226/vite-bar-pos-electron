@@ -20,7 +20,9 @@ const api = {
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
   addCategory: (name) => ipcRenderer.invoke('db:add-category', name),
 
-  sendToPrinter: (data) => ipcRenderer.send('print-receipt', data)
+  sendToPrinter: (data) => ipcRenderer.send('print-receipt', data),
+
+  printHtml: (html) => ipcRenderer.invoke('print-html', html)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
