@@ -80,7 +80,7 @@ export function createFeatureWindow(parent, route, width = 800, height = 600) {
     backgroundColor: '#0f172a', // Slate-900
     show: false,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.mjs')
+      preload: join(__dirname, '../preload/index.mj')
     }
   })
 

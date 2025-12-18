@@ -9,9 +9,9 @@ export function registerIpcHandlers() {
   // Handler to fetch all products
   ipcMain.handle('db:get-products', async () => {
     try {
-      // Use .lean() to get plain JavaScript objects suitable for IPC
       const products = await Product.find({}).lean()
-      return products
+      // FIX: Convert BSON ObjectIds to strings immediately
+      return JSON.parse(JSON.stringify(products))
     } catch (error) {
       console.error('Error fetching products:', error)
       return { error: 'Failed to fetch products' }
@@ -23,7 +23,8 @@ export function registerIpcHandlers() {
     try {
       const newProduct = new Product(productData)
       await newProduct.save()
-      return { success: true, product: newProduct.toObject() }
+      // FIX: Sanitize the new product too
+      return { success: true, product: JSON.parse(JSON.stringify(newProduct)) }
     } catch (error) {
       console.error('Error adding product:', error)
       return { error: 'Failed to add product' }
@@ -152,20 +153,26 @@ export function registerIpcHandlers() {
   })
 
   // Update order items
-  ipcMain.handle('db:update-order-items', async (event, { orderId, items }) => {
+  ipcMain.handle('db:update-order-items', async (event, { orderId, items, subtotal, total }) => {
     try {
-      const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
-      const total = subtotal // Add tax logic here if needed
-
       const updatedOrder = await Order.findByIdAndUpdate(
         orderId,
-        { items, subtotal, total },
-        { new: true }
+        {
+          $set: {
+            items: items, // Mongoose casts the string productId to ObjectId here
+            subtotal: total,
+            total: total
+          }
+        },
+        { new: true, runValidators: true }
       ).lean()
 
-      return { success: true, order: updatedOrder }
+      // Crucial: Use JSON stringify/parse to remove Mongoose-specific logic
+      // before sending the data back across the bridge to React.
+      return JSON.parse(JSON.stringify(updatedOrder))
     } catch (error) {
-      return { error: 'Failed to update order' }
+      console.error('Database Save Error:', error)
+      return { success: false, error: error.message }
     }
   })
 
@@ -195,7 +202,34 @@ export function registerIpcHandlers() {
       throw error
     }
   })
+  ipcMain.handle('db:place-order', async (event, { orderId }) => {
+    try {
+      return await Order.findByIdAndUpdate(
+        orderId,
+        { $set: { 'items.$[].status': 'sent' } }, // Update all items to sent
+        { new: true }
+      ).lean()
+    } catch (error) {
+      return { error: 'Failed to place order' }
+    }
+  })
 
+  ipcMain.handle('db:get-floor-status', async () => {
+    try {
+      // Find all orders that are NOT paid and NOT void (so, 'open')
+      const activeOrders = await Order.find({ status: 'open' })
+        .select('tableNumber total status items') // We only need these fields
+        .lean()
+
+      // Sanitize just like before to avoid crashes
+      return JSON.parse(JSON.stringify(activeOrders))
+    } catch (error) {
+      console.error('Error fetching floor status:', error)
+      return []
+    }
+  })
+
+  // OPEN NEW WINDOWS
   ipcMain.on('open-settings-window', (event) => {
     const parent = BrowserWindow.fromWebContents(event.sender)
     createFeatureWindow(parent, 'settings', 900, 700)

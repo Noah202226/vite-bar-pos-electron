@@ -29,6 +29,7 @@ const api = {
 
   // Also add the update handler for when we add items later
   updateOrderItems: (data) => ipcRenderer.invoke('db:update-order-items', data),
+  getFloorStatus: () => ipcRenderer.invoke('db:get-floor-status'),
 
   // Use send for window commands
   openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
