@@ -1,8 +1,9 @@
-import { ipcMain } from 'electron'
+import { ipcMain, BrowserWindow } from 'electron'
 import { Product } from './db/models/Product'
 import { User } from './db/models/User'
 import { Category } from './db/models/Category'
 import { Order } from './db/models/Order'
+import { createFeatureWindow } from './index'
 
 export function registerIpcHandlers() {
   // Handler to fetch all products
@@ -150,23 +151,6 @@ export function registerIpcHandlers() {
     }
   })
 
-  // Get active order for a table or create one
-  ipcMain.handle('db:get-table-order', async (event, tableNumber) => {
-    try {
-      let order = await Order.findOne({ tableNumber, status: 'open' }).lean()
-
-      if (!order) {
-        // Create a new order if it's a fresh table
-        order = new Order({ tableNumber, items: [], status: 'open' })
-        await order.save()
-        return order.toObject()
-      }
-      return order
-    } catch (error) {
-      return { error: 'Failed to sync table order' }
-    }
-  })
-
   // Update order items
   ipcMain.handle('db:update-order-items', async (event, { orderId, items }) => {
     try {
@@ -183,5 +167,37 @@ export function registerIpcHandlers() {
     } catch (error) {
       return { error: 'Failed to update order' }
     }
+  })
+
+  // Get active order for a table or create one
+  ipcMain.handle('db:get-table-order', async (event, tableNumber) => {
+    try {
+      // 1. Try to find existing open order
+      let order = await Order.findOne({ tableNumber, status: 'open' }).lean()
+
+      // 2. If not found, create it on the fly
+      if (!order) {
+        const newOrder = new Order({
+          tableNumber,
+          items: [],
+          status: 'open',
+          subtotal: 0,
+          total: 0,
+          createdAt: new Date()
+        })
+        const savedOrder = await newOrder.save()
+        return JSON.parse(JSON.stringify(savedOrder)) // Clean object for frontend
+      }
+
+      return JSON.parse(JSON.stringify(order))
+    } catch (error) {
+      console.error('IPC Order Error:', error)
+      throw error
+    }
+  })
+
+  ipcMain.on('open-settings-window', (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    createFeatureWindow(parent, 'settings', 900, 700)
   })
 }

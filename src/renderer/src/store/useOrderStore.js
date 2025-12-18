@@ -4,14 +4,17 @@ export const useOrderStore = create((set, get) => ({
   activeOrder: null,
   isLoading: false,
 
-  // Load order when table is selected
   loadTableOrder: async (tableNumber) => {
     set({ isLoading: true })
-    const order = await window.api.getTableOrder(tableNumber)
-    set({ activeOrder: order, isLoading: false })
+    try {
+      const order = await window.api.getTableOrder(tableNumber)
+      set({ activeOrder: order, isLoading: false })
+    } catch (error) {
+      console.error('Failed to load order:', error)
+      set({ isLoading: false })
+    }
   },
 
-  // Add item to the current order
   addItem: async (product) => {
     const { activeOrder } = get()
     if (!activeOrder) return
@@ -31,10 +34,17 @@ export const useOrderStore = create((set, get) => ({
       })
     }
 
-    // Update locally first for snappiness
-    set({ activeOrder: { ...activeOrder, items: updatedItems } })
+    const newSubtotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-    // Sync to Database
+    set({
+      activeOrder: {
+        ...activeOrder,
+        items: updatedItems,
+        subtotal: newSubtotal,
+        total: newSubtotal
+      }
+    })
+
     await window.api.updateOrderItems({
       orderId: activeOrder._id,
       items: updatedItems

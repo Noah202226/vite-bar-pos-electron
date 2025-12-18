@@ -2,6 +2,10 @@ import React from 'react'
 import { Trash2, Tag, Calculator, Users, UserCheck, UserX, History, Settings } from 'lucide-react'
 
 export default function OperationsSidebar() {
+  const handleOpenSettings = () => {
+    window.api.openSettingsWindow() // This triggers the IPC -> createFeatureWindow
+  }
+
   return (
     <nav className="w-80 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0">
       <div className="p-6 border-b border-slate-800 bg-slate-900/50">
@@ -57,7 +61,10 @@ export default function OperationsSidebar() {
       </div>
 
       <div className="p-6 border-t border-slate-800">
-        <button className="w-full bg-slate-800 hover:bg-slate-700 p-4 rounded-2xl flex items-center justify-between group transition-all">
+        <button
+          onClick={handleOpenSettings}
+          className="w-full bg-slate-800 hover:bg-slate-700 p-4 rounded-2xl flex items-center justify-between group transition-all"
+        >
           <div className="flex items-center gap-3">
             <Settings
               size={20}

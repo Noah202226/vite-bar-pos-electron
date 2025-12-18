@@ -34,10 +34,10 @@ export default function Header({ onLogout }) {
         </div>
         <div>
           <h1 className="font-black text-2xl tracking-tighter text-white">
-            NEON<span className="text-indigo-500">POS</span>
+            VHYPE <span className="text-indigo-500">POS</span>
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">
-            Restobar OS v1.0
+            ArcTech OS v1.0
           </p>
         </div>
       </div>

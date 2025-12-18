@@ -22,7 +22,17 @@ const api = {
 
   sendToPrinter: (data) => ipcRenderer.send('print-receipt', data),
 
-  printHtml: (html) => ipcRenderer.invoke('print-html', html)
+  printHtml: (html) => ipcRenderer.invoke('print-html', html),
+
+  // Add this line to bridge the function
+  getTableOrder: (num) => ipcRenderer.invoke('db:get-table-order', num),
+
+  // Also add the update handler for when we add items later
+  updateOrderItems: (data) => ipcRenderer.invoke('db:update-order-items', data),
+
+  // Use send for window commands
+  openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
+  openAddProductWindow: () => ipcRenderer.send('open-add-product-window')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

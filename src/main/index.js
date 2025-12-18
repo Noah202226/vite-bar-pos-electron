@@ -39,44 +39,69 @@ function createAddProductWindow() {
 }
 
 // --- NEW: Function to create the Settings window ---
-function createSettingsWindow() {
-  const settingsWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+// export function createSettingsWindow() {
+//   const settingsWindow = new BrowserWindow({
+//     width: 800,
+//     height: 600,
+//     show: false,
+//     title: 'Application Settings and Admin Panel',
+//     parent: global.mainWindow,
+//     modal: true,
+//     webPreferences: {
+//       preload: join(__dirname, '../preload/index.js'),
+//       sandbox: false
+//     }
+//   })
+
+//   // Load the same renderer entry point, but with a new hash route
+//   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+//     settingsWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/#/settings')
+//   } else {
+//     settingsWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/settings' })
+//   }
+
+//   settingsWindow.on('ready-to-show', () => {
+//     settingsWindow.show()
+//     // Maaari mo ring buksan ang DevTools para sa debugging:
+//     // settingsWindow.webContents.openDevTools()
+//   })
+
+//   return settingsWindow
+// }
+
+export function createFeatureWindow(parent, route, width = 800, height = 600) {
+  const featureWindow = new BrowserWindow({
+    parent: parent, // Links it to the main dashboard
+    modal: true, // Blocks interaction with dashboard until closed
+    width: width,
+    height: height,
+    frame: false, // Makes it look cleaner (no standard windows top bar)
+    resizable: false,
+    backgroundColor: '#0f172a', // Slate-900
     show: false,
-    title: 'Application Settings and Admin Panel',
-    parent: global.mainWindow,
-    modal: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      preload: join(__dirname, '../preload/index.mjs')
     }
   })
 
-  // Load the same renderer entry point, but with a new hash route
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    settingsWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/#/settings')
+  // Load the specific route for the feature
+  if (process.env.NODE_ENV === 'development') {
+    featureWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}/#/${route}`)
   } else {
-    settingsWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/settings' })
+    featureWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: route })
   }
 
-  settingsWindow.on('ready-to-show', () => {
-    settingsWindow.show()
-    // Maaari mo ring buksan ang DevTools para sa debugging:
-    // settingsWindow.webContents.openDevTools()
-  })
-
-  return settingsWindow
+  featureWindow.once('ready-to-show', () => featureWindow.show())
 }
 
 function createWindow() {
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1200,
+    height: 800,
     show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    fullscreen: true, // Forces the window to fill the screen
+    autoHideMenuBar: true, // Removes the File/Edit/View menu
+    backgroundColor: '#020617', // Slate-950 to match your theme
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -159,9 +184,6 @@ app.whenReady().then(() => {
   })
 
   connectDB()
-
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
 
   global.mainWindow = createWindow()
 
