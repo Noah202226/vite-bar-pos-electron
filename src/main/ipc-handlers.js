@@ -214,18 +214,31 @@ export function registerIpcHandlers() {
     }
   })
 
+  // 1. Update Floor Status to include isReserved
   ipcMain.handle('db:get-floor-status', async () => {
     try {
-      // Find all orders that are NOT paid and NOT void (so, 'open')
       const activeOrders = await Order.find({ status: 'open' })
-        .select('tableNumber total status items') // We only need these fields
+        .select('tableNumber total status isReserved')
         .lean()
-
-      // Sanitize just like before to avoid crashes
       return JSON.parse(JSON.stringify(activeOrders))
     } catch (error) {
-      console.error('Error fetching floor status:', error)
       return []
+    }
+  })
+
+  // 2. Add Toggle Reservation Handler
+  ipcMain.handle('db:toggle-reservation', async (event, { tableNumber }) => {
+    try {
+      let order = await Order.findOne({ tableNumber, status: 'open' })
+      if (!order) {
+        order = new Order({ tableNumber, status: 'open', isReserved: true })
+      } else {
+        order.isReserved = !order.isReserved
+      }
+      await order.save()
+      return JSON.parse(JSON.stringify(order))
+    } catch (error) {
+      return { error: error.message }
     }
   })
 

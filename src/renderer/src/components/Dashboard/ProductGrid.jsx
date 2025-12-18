@@ -34,7 +34,7 @@ export default function ProductGrid() {
             <span className="text-[10px] font-black uppercase tracking-widest">Floor Map</span>
           </button>
 
-          <div className="h-8 w-[1px] bg-slate-800 mx-2" />
+          <div className="h-8 w-px bg-slate-800 mx-2" />
 
           <div>
             <h3 className="text-white font-black text-sm uppercase tracking-tighter">

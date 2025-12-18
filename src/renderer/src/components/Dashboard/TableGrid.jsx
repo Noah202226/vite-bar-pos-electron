@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
-import { Crown, User, Receipt } from 'lucide-react'
+import { Crown, User, Receipt, CalendarCheck } from 'lucide-react'
 
 export default function TableGrid() {
   const { loadTableOrder, activeOrder, floorStatus, fetchFloorStatus } = useOrderStore()
@@ -55,50 +55,50 @@ export default function TableGrid() {
       {/* Grid */}
       <div className="flex-1 grid grid-cols-5 gap-4">
         {zones.map((zone) => {
-          // Find if this table has an open order in our floorStatus array
-          const tableOrder = floorStatus.find((o) => o.tableNumber === zone.id)
-
-          // Check if it's the one currently selected by YOU
+          const tableOrder = floorStatus.find((o) => String(o.tableNumber) === String(zone.id))
           const isSelected = activeOrder?.tableNumber === zone.id
 
-          const isOccupied = !!tableOrder
+          // LOGIC: Occupied if there are items (total > 0)
+          const hasTotal = tableOrder?.total > 0
+          const isReserved = tableOrder?.isReserved
+          const isOccupied = hasTotal || isReserved
           const isVip = zone.type === 'vip'
 
           return (
             <button
               key={zone.id}
               onClick={() => loadTableOrder(zone.id)}
+              onContextMenu={(e) => {
+                e.preventDefault() // Right click to reserve
+                useOrderStore.getState().toggleReservation(zone.id)
+              }}
               className={`
-                relative rounded-3xl border transition-all duration-300 flex flex-col items-center justify-center gap-1 group
-                ${
-                  isSelected
-                    ? 'bg-indigo-600 border-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.4)] scale-[1.02] z-10'
-                    : isOccupied
-                      ? 'bg-slate-900 border-indigo-500/50 shadow-[0_0_20px_rgba(79,70,229,0.15)]'
-                      : isVip
-                        ? 'bg-slate-900/40 border-amber-500/20 hover:border-amber-500/50 hover:bg-slate-900'
-                        : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
-                }
-              `}
+        relative rounded-3xl border transition-all duration-300 flex flex-col items-center justify-center gap-1 group
+        ${
+          isSelected
+            ? 'bg-indigo-600 border-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.4)]'
+            : isReserved
+              ? 'bg-amber-950/40 border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.1)]'
+              : hasTotal
+                ? 'bg-slate-900 border-indigo-500/50 shadow-[0_0_20px_rgba(79,70,229,0.15)]'
+                : 'bg-slate-900/40 border-slate-800'
+        }
+      `}
             >
-              {/* Top Icons */}
               <div className="absolute top-4 right-4 flex gap-2">
-                {isVip && (
-                  <Crown size={14} className={isOccupied ? 'text-amber-400' : 'text-amber-900'} />
-                )}
-                {isOccupied && <User size={14} className="text-indigo-400" />}
+                {isReserved && <CalendarCheck size={14} className="text-amber-500 animate-pulse" />}
+                {hasTotal && <User size={14} className="text-indigo-400" />}
+                {isVip && <Crown size={14} className="text-amber-400/50" />}
               </div>
 
-              {/* Table Number */}
               <span
                 className={`text-3xl font-black tracking-tighter ${isSelected ? 'text-white' : isOccupied ? 'text-indigo-100' : 'text-slate-600'}`}
               >
                 {zone.label}
               </span>
 
-              {/* Status / Amount Display */}
               <div className="h-6 flex items-center justify-center">
-                {isOccupied ? (
+                {hasTotal ? (
                   <div
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${isSelected ? 'bg-black/20' : 'bg-indigo-500/20'}`}
                   >
@@ -108,8 +108,12 @@ export default function TableGrid() {
                       ₱{tableOrder.total.toLocaleString()}
                     </span>
                   </div>
+                ) : isReserved ? (
+                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">
+                    RESERVED
+                  </span>
                 ) : (
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-700 group-hover:text-slate-600">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-700">
                     EMPTY
                   </span>
                 )}

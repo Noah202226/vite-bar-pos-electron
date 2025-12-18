@@ -17,6 +17,7 @@ const OrderSchema = new mongoose.Schema(
     tax: { type: Number, default: 0 },
     total: { type: Number, default: 0 },
     status: { type: String, enum: ['open', 'paid', 'void'], default: 'open' },
+    isReserved: { type: Boolean, default: false },
     openedBy: String,
     closedAt: Date
   },

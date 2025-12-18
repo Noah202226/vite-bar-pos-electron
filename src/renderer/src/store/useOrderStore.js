@@ -30,6 +30,11 @@ export const useOrderStore = create((set, get) => ({
       console.error('Failed to fetch floor status', error)
     }
   },
+  toggleReservation: async (tableNumber) => {
+    await window.api.toggleReservation({ tableNumber })
+    const { fetchFloorStatus } = get()
+    await fetchFloorStatus() // Refresh the grid
+  },
 
   addItem: async (product) => {
     const { activeOrder } = get()
