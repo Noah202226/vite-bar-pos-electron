@@ -3,7 +3,7 @@ import { Receipt, Trash2 } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
 
 export default function OrderSidebar() {
-  const { activeOrder, isLoading } = useOrderStore()
+  const { activeOrder, isLoading, checkout } = useOrderStore()
 
   return (
     <aside className="w-80 lg:w-96 bg-slate-900 border-r border-slate-800 flex flex-col shadow-inner">
@@ -84,11 +84,21 @@ export default function OrderSidebar() {
             <span className="text-indigo-400">₱{activeOrder?.total?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
+
         <button
-          disabled={!activeOrder || activeOrder.items.length === 0}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest text-sm"
+          onClick={() => checkout()}
+          disabled={
+            !activeOrder || !activeOrder.items || activeOrder.items.length === 0 || isLoading
+          }
+          className={`w-full py-4 font-black rounded-xl transition-all shadow-lg 
+    ${
+      !activeOrder || !activeOrder.items || activeOrder.items.length === 0
+        ? 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
+        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20'
+    }
+  `}
         >
-          Place & Print Order
+          PLACE & PRINT ORDER
         </button>
       </div>
     </aside>

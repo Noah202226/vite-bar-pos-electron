@@ -20,9 +20,9 @@ const api = {
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
   addCategory: (name) => ipcRenderer.invoke('db:add-category', name),
 
-  sendToPrinter: (data) => ipcRenderer.send('print-receipt', data),
+  // sendToPrinter: (data) => ipcRenderer.send('print-receipt', data),
 
-  printHtml: (html) => ipcRenderer.invoke('print-html', html),
+  // printHtml: (html) => ipcRenderer.invoke('print-html', html),
 
   // Add this line to bridge the function
   getTableOrder: (num) => ipcRenderer.invoke('db:get-table-order', num),
@@ -31,6 +31,8 @@ const api = {
   updateOrderItems: (data) => ipcRenderer.invoke('db:update-order-items', data),
   getFloorStatus: () => ipcRenderer.invoke('db:get-floor-status'),
   toggleReservation: (data) => ipcRenderer.invoke('db:toggle-reservation', data),
+  checkoutOrder: (data) => ipcRenderer.invoke('db:checkout-order', data),
+  printOrderReceipt: (orderData) => ipcRenderer.invoke('print-receipt', orderData),
 
   // Use send for window commands
   openSettingsWindow: () => ipcRenderer.send('open-settings-window'),

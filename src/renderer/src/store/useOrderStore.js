@@ -89,23 +89,28 @@ export const useOrderStore = create((set, get) => ({
   clearActiveOrder: () => set({ activeOrder: null }),
 
   // Logic to "Sent" items to kitchen (Place & Print)
-  placeOrder: async () => {
-    const { activeOrder } = get()
+  checkout: async () => {
+    const { activeOrder, fetchFloorStatus, clearActiveOrder } = get()
     if (!activeOrder) return
 
-    const updatedItems = activeOrder.items.map((item) => ({
-      ...item,
-      status: 'sent'
-    }))
+    try {
+      // 1. Mark as Paid in Database
+      const result = await window.api.checkoutOrder({ orderId: activeOrder._id })
 
-    set({ activeOrder: { ...activeOrder, items: updatedItems } })
+      if (result.error) throw new Error(result.error)
 
-    await window.api.updateOrderItems({
-      orderId: activeOrder._id,
-      items: updatedItems
-    })
+      // 2. Trigger Print (Using your existing printHtml or sendToPrinter)
+      // We pass the full order details to the printer
+      await window.api.printOrderReceipt(result)
 
-    // Trigger receipt printing via the IPC handler you already have
-    // await window.api.printOrder(activeOrder)
+      // 3. Cleanup UI
+      clearActiveOrder()
+      await fetchFloorStatus() // Update grid so table turns 'Empty'
+
+      return { success: true }
+    } catch (error) {
+      console.error('Checkout failed:', error)
+      return { success: false }
+    }
   }
 }))

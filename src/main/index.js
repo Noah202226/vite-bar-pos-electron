@@ -143,45 +143,34 @@ app.whenReady().then(() => {
   // 1. REGISTER IPC HANDLERS HERE
   registerIpcHandlers() // <--- CRITICAL: CALL THE FUNCTION HERE
 
-  // 2. REGISTER THE NEW WINDOW HANDLER HERE <--- MOVED TO THIS LOCATION
-  ipcMain.handle('window:open-add-product', () => {
-    createAddProductWindow()
-  })
+  // ipcMain.handle('print-html', async (_, html) => {
+  //   const printWindow = new BrowserWindow({
+  //     width: 300,
+  //     height: 600,
+  //     show: false,
+  //     webPreferences: {
+  //       sandbox: false
+  //     }
+  //   })
 
-  // 3. NEW: IPC Handler for Settings Window
-  ipcMain.handle('window:open-settings', () => {
-    // <--- NEW HANDLER
-    createSettingsWindow()
-  })
+  //   await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
 
-  ipcMain.handle('print-html', async (_, html) => {
-    const printWindow = new BrowserWindow({
-      width: 300,
-      height: 600,
-      show: false,
-      webPreferences: {
-        sandbox: false
-      }
-    })
-
-    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
-
-    printWindow.webContents.print(
-      {
-        silent: true,
-        printBackground: true,
-        margins: { marginType: 'none' },
-        scaleFactor: 100, // 👈 prevent auto scaling
-        pageSize: {
-          width: 58000,
-          height: 200000
-        }
-      },
-      () => {
-        printWindow.close()
-      }
-    )
-  })
+  //   printWindow.webContents.print(
+  //     {
+  //       silent: true,
+  //       printBackground: true,
+  //       margins: { marginType: 'none' },
+  //       scaleFactor: 100, // 👈 prevent auto scaling
+  //       pageSize: {
+  //         width: 58000,
+  //         height: 200000
+  //       }
+  //     },
+  //     () => {
+  //       printWindow.close()
+  //     }
+  //   )
+  // })
 
   connectDB()
 

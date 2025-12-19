@@ -242,6 +242,55 @@ export function registerIpcHandlers() {
     }
   })
 
+  ipcMain.handle('db:checkout-order', async (event, { orderId }) => {
+    try {
+      const finalizedOrder = await Order.findByIdAndUpdate(
+        orderId,
+        {
+          $set: {
+            status: 'paid',
+            closedAt: new Date(),
+            isReserved: false // Automatically clear reservation on pay
+          }
+        },
+        { new: true }
+      ).lean()
+
+      return JSON.parse(JSON.stringify(finalizedOrder))
+    } catch (error) {
+      console.error('Checkout Error:', error)
+      return { error: 'Failed to process payment' }
+    }
+  })
+  ipcMain.handle('print-receipt', async (event, order) => {
+    const receiptHtml = `
+    <div style="width: 80mm; font-family: monospace; font-size: 12px;">
+      <h2 style="text-align: center;">VHYPE POS</h2>
+      <p style="text-align: center;">Table: ${order.tableNumber}</p>
+      <hr>
+      ${order.items
+        .map(
+          (item) => `
+        <div style="display: flex; justify-content: space-between;">
+          <span>${item.quantity}x ${item.name}</span>
+          <span>₱${(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+      `
+        )
+        .join('')}
+      <hr>
+      <div style="display: flex; justify-content: space-between; font-weight: bold;">
+        <span>TOTAL:</span>
+        <span>₱${order.total.toFixed(2)}</span>
+      </div>
+      <p style="text-align: center; margin-top: 20px;">Thank you! Come again.</p>
+    </div>
+  `
+
+    // Use your existing printing logic here (e.g., hidden window print)
+    // await printFunction(receiptHtml);
+  })
+
   // OPEN NEW WINDOWS
   ipcMain.on('open-settings-window', (event) => {
     const parent = BrowserWindow.fromWebContents(event.sender)
