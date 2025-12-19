@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom'
 import App from './App' // Your main authentication logic
 import AddProductPage from './components/AddProductPage'
 import SettingsPage from './components/SettingsPage'
+import SalesReport from './components/Dashboard/SalesReport'
 
 // This component determines which component to render based on the URL hash.
 export default function Router() {
@@ -16,8 +17,8 @@ export default function Router() {
 
         {/* 2. Add Product Route: Handles the new window path: /#/add-product
          */}
+        <Route path="/sales-report" element={<SalesReport />} />
         <Route path="/add-product" element={<AddProductPage />} />
-
         <Route path="/settings" element={<SettingsPage />} />
 
         {/* 3. Optional: Add a user route for the next feature

@@ -1,56 +1,45 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+// import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
 const api = {
+  // --- Database / Product Handlers ---
   getProducts: () => ipcRenderer.invoke('db:get-products'),
-  addProduct: (product) => ipcRenderer.invoke('db:add-product', product),
+  addProduct: (data) => ipcRenderer.invoke('db:add-product', data),
+  getCategories: () => ipcRenderer.invoke('db:get-categories'),
+  addCategory: (name) => ipcRenderer.invoke('db:add-category', name),
 
-  // Auth handlers <--- NEW
+  // --- Auth ---
   checkSession: () => ipcRenderer.invoke('auth:check-session'),
   login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
   signup: (userData) => ipcRenderer.invoke('auth:signup', userData),
   logout: () => ipcRenderer.invoke('auth:logout'),
 
-  // Window Handlers
-  openAddProductWindow: () => ipcRenderer.invoke('window:open-add-product'),
-  openSettingsWindow: () => ipcRenderer.invoke('window:open-settings'),
-
-  // --- NEW DATABASE HANDLERS FOR CATEGORIES ---
-  getCategories: () => ipcRenderer.invoke('db:get-categories'),
-  addCategory: (name) => ipcRenderer.invoke('db:add-category', name),
-
-  // sendToPrinter: (data) => ipcRenderer.send('print-receipt', data),
-
-  // printHtml: (html) => ipcRenderer.invoke('print-html', html),
-
-  // Add this line to bridge the function
+  // --- Orders ---
   getTableOrder: (num) => ipcRenderer.invoke('db:get-table-order', num),
-
-  // Also add the update handler for when we add items later
   updateOrderItems: (data) => ipcRenderer.invoke('db:update-order-items', data),
   getFloorStatus: () => ipcRenderer.invoke('db:get-floor-status'),
   toggleReservation: (data) => ipcRenderer.invoke('db:toggle-reservation', data),
   checkoutOrder: (data) => ipcRenderer.invoke('db:checkout-order', data),
   printOrderReceipt: (orderData) => ipcRenderer.invoke('print-receipt', orderData),
 
-  // Use send for window commands
-  openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
-  openAddProductWindow: () => ipcRenderer.send('open-add-product-window')
-}
+  // --- REPORTING (Data Fetching) ---
+  // This fetches the data arrays
+  getSalesReport: (date) => ipcRenderer.invoke('db:get-sales-report', { date }),
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
+  // --- WINDOW MANAGEMENT (UI Triggers) ---
+  // These only tell Main process to open a new window
+  openAddProductWindow: () => ipcRenderer.send('window:open-add-product'),
+  openSettingsWindow: () => ipcRenderer.send('window:open-settings'),
+  openSalesReport: () => ipcRenderer.send('window:open-sales-report') // Fixed missing handler
+}
 
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
+    // contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
     console.error(error)
   }
 } else {
-  window.electron = electronAPI
   window.api = api
 }

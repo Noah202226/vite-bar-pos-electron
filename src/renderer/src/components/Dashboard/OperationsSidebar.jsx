@@ -1,9 +1,23 @@
 import React from 'react'
-import { Trash2, Tag, Calculator, Users, UserCheck, UserX, History, Settings } from 'lucide-react'
+import {
+  Trash2,
+  Tag,
+  Calculator,
+  Users,
+  UserCheck,
+  UserX,
+  History,
+  Settings,
+  BarChart3
+} from 'lucide-react'
 
 export default function OperationsSidebar() {
   const handleOpenSettings = () => {
     window.api.openSettingsWindow() // This triggers the IPC -> createFeatureWindow
+  }
+
+  const handleOpenSalesReport = () => {
+    window.api.openSalesReport() // Triggers the 'window:open-sales-report' IPC
   }
 
   return (
@@ -39,6 +53,12 @@ export default function OperationsSidebar() {
               icon={<Users />}
               label="Merge Table"
               color="hover:border-emerald-500 text-emerald-400"
+            />
+            <WideOpButton
+              onClick={handleOpenSalesReport}
+              icon={<BarChart3 />}
+              label="Daily Sales Report"
+              color="hover:border-indigo-600 text-indigo-400"
             />
           </div>
         </section>

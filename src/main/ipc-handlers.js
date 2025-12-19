@@ -21,13 +21,13 @@ export function registerIpcHandlers() {
   // Handler to add a new product
   ipcMain.handle('db:add-product', async (event, productData) => {
     try {
+      // Assuming you have a Product model. If not, I can provide the Schema.
       const newProduct = new Product(productData)
       await newProduct.save()
-      // FIX: Sanitize the new product too
       return { success: true, product: JSON.parse(JSON.stringify(newProduct)) }
     } catch (error) {
       console.error('Error adding product:', error)
-      return { error: 'Failed to add product' }
+      return { success: false, error: error.message }
     }
   })
 
@@ -291,9 +291,27 @@ export function registerIpcHandlers() {
     // await printFunction(receiptHtml);
   })
 
-  // OPEN NEW WINDOWS
-  ipcMain.on('open-settings-window', (event) => {
-    const parent = BrowserWindow.fromWebContents(event.sender)
-    createFeatureWindow(parent, 'settings', 900, 700)
+  ipcMain.handle('db:get-sales-report', async (event, { date }) => {
+    try {
+      const start = new Date(date)
+      start.setHours(0, 0, 0, 0)
+
+      const end = new Date(date)
+      end.setHours(23, 59, 59, 999)
+
+      console.log(`Fetching sales for: ${start.toISOString()}`)
+
+      const sales = await Order.find({
+        status: 'paid',
+        closedAt: { $gte: start, $lte: end }
+      })
+        .sort({ closedAt: -1 })
+        .lean()
+
+      return JSON.parse(JSON.stringify(sales))
+    } catch (error) {
+      console.error('Failed to fetch sales report:', error)
+      return []
+    }
   })
 }

@@ -7,37 +7,6 @@ import { connectDB } from './db/connection'
 import { registerIpcHandlers } from './ipc-handlers'
 import { PosPrinter } from 'electron-pos-printer'
 
-// --- NEW: Function to create the Add Product window ---
-function createAddProductWindow() {
-  const addProductWindow = new BrowserWindow({
-    width: 600,
-    height: 700,
-    show: false, // Don't show until ready
-    title: 'Add New Product',
-    parent: global.mainWindow, // Link it to the main window (optional)
-    modal: true, // Prevents interaction with the main window until closed (optional)
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
-    }
-  })
-
-  // Load the same renderer entry point. Vite's routing will handle which component to show.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    addProductWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/#/add-product')
-  } else {
-    addProductWindow.loadFile(join(__dirname, '../renderer/index.html'), {
-      hash: '/add-product'
-    })
-  }
-
-  addProductWindow.on('ready-to-show', () => {
-    addProductWindow.show()
-  })
-
-  return addProductWindow
-}
-
 // --- NEW: Function to create the Settings window ---
 // export function createSettingsWindow() {
 //   const settingsWindow = new BrowserWindow({
@@ -80,7 +49,7 @@ export function createFeatureWindow(parent, route, width = 800, height = 600) {
     backgroundColor: '#0f172a', // Slate-900
     show: false,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.mj')
+      preload: join(__dirname, '../preload/index.js')
     }
   })
 
@@ -141,7 +110,6 @@ app.whenReady().then(() => {
   })
 
   // 1. REGISTER IPC HANDLERS HERE
-  registerIpcHandlers() // <--- CRITICAL: CALL THE FUNCTION HERE
 
   // ipcMain.handle('print-html', async (_, html) => {
   //   const printWindow = new BrowserWindow({
@@ -174,7 +142,25 @@ app.whenReady().then(() => {
 
   connectDB()
 
+  registerIpcHandlers() // <--- CRITICAL: CALL THE FUNCTION HERE
+
   global.mainWindow = createWindow()
+
+  ipcMain.on('window:open-settings', (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    createFeatureWindow(parent, 'settings', 900, 700)
+  })
+
+  ipcMain.on('window:open-sales-report', (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    // Route must match your React Router route (e.g., /sales-report)
+    createFeatureWindow(parent, 'sales-report', 1100, 800)
+  })
+
+  ipcMain.on('window:open-add-product', (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    createFeatureWindow(parent, 'add-product', 600, 700)
+  })
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

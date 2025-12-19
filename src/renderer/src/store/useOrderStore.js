@@ -4,17 +4,33 @@ export const useOrderStore = create((set, get) => ({
   activeOrder: null,
   isLoading: false,
   floorStatus: [],
+  salesData: [],
 
+  // FIXED: This now calls getSalesReport (data), not openSettingsWindow (UI)
+  fetchSalesReport: async (date = new Date()) => {
+    set({ isLoading: true })
+    try {
+      // Ensure we pass a plain string or date object as expected by the backend
+      const data = await window.api.getSalesReport(date)
+      console.log('Sales Data Fetched:', data)
+      set({ salesData: data || [], isLoading: false })
+    } catch (error) {
+      console.error('Failed to fetch sales report:', error)
+      set({ salesData: [], isLoading: false })
+    }
+  },
   loadTableOrder: async (tableNumber) => {
     set({ isLoading: true })
     try {
       // This calls the handler that performs Order.findOne({ tableNumber, status: 'open' })
       const order = await window.api.getTableOrder(tableNumber)
 
-      set({
-        activeOrder: order, // This now contains the items we just saved
-        isLoading: false
-      })
+      if (!order) {
+        // If no order exists in DB, set activeOrder to null or a fresh object
+        set({ activeOrder: { tableNumber, items: [], total: 0, subtotal: 0 }, isLoading: false })
+      } else {
+        set({ activeOrder: order, isLoading: false })
+      }
     } catch (error) {
       console.error('Failed to load order:', error)
       set({ isLoading: false })
