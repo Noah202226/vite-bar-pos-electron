@@ -148,7 +148,7 @@ app.whenReady().then(() => {
 
   ipcMain.on('window:open-settings', (event) => {
     const parent = BrowserWindow.fromWebContents(event.sender)
-    createFeatureWindow(parent, 'settings', 900, 700)
+    createFeatureWindow(parent, 'settings', 1300, 960)
   })
 
   ipcMain.on('window:open-sales-report', (event) => {

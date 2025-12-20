@@ -1,9 +1,8 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain } from 'electron'
 import { Product } from './db/models/Product'
 import { User } from './db/models/User'
 import { Category } from './db/models/Category'
 import { Order } from './db/models/Order'
-import { createFeatureWindow } from './index'
 
 export function registerIpcHandlers() {
   // Handler to fetch all products
@@ -17,7 +16,6 @@ export function registerIpcHandlers() {
       return { error: 'Failed to fetch products' }
     }
   })
-
   // Handler to add a new product
   ipcMain.handle('db:add-product', async (event, productData) => {
     try {
@@ -27,6 +25,24 @@ export function registerIpcHandlers() {
       return { success: true, product: JSON.parse(JSON.stringify(newProduct)) }
     } catch (error) {
       console.error('Error adding product:', error)
+      return { success: false, error: error.message }
+    }
+  })
+  // Handler to delete a product
+  ipcMain.handle('db:delete-product', async (event, id) => {
+    try {
+      await Product.findByIdAndDelete(id)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+  // Handler to update a product
+  ipcMain.handle('db:update-product', async (event, { id, data }) => {
+    try {
+      const updated = await Product.findByIdAndUpdate(id, { $set: data }, { new: true }).lean()
+      return { success: true, product: JSON.parse(JSON.stringify(updated)) }
+    } catch (error) {
       return { success: false, error: error.message }
     }
   })
@@ -130,7 +146,7 @@ export function registerIpcHandlers() {
   ipcMain.handle('db:get-categories', async () => {
     try {
       const categories = await Category.find({}).sort({ sortOrder: 1 }).lean()
-      return categories
+      return JSON.parse(JSON.stringify(categories))
     } catch (error) {
       console.error('Error fetching categories:', error)
       return { error: 'Failed to fetch categories' }
@@ -149,6 +165,17 @@ export function registerIpcHandlers() {
         return { error: 'Category already exists.' }
       }
       return { error: 'Failed to add category' }
+    }
+  })
+  ipcMain.handle('db:delete-category', async (event, id) => {
+    try {
+      console.log('deleting cat:', id)
+      // Use the Mongoose model 'Category' instead of 'db'
+      await Category.findByIdAndDelete(id)
+      return { success: true }
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      return { success: false, error: 'Failed to delete category' }
     }
   })
 

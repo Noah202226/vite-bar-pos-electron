@@ -1,12 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron'
-// import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
   // --- Database / Product Handlers ---
   getProducts: () => ipcRenderer.invoke('db:get-products'),
   addProduct: (data) => ipcRenderer.invoke('db:add-product', data),
+  updateProduct: (id, data) => ipcRenderer.invoke('db:update-product', { id, data }),
+  deleteProduct: (id) => ipcRenderer.invoke('db:delete-product', id),
+
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
   addCategory: (name) => ipcRenderer.invoke('db:add-category', name),
+  deleteCategory: (id) => ipcRenderer.invoke('db:delete-category', id),
 
   // --- Auth ---
   checkSession: () => ipcRenderer.invoke('auth:check-session'),
@@ -35,7 +38,6 @@ const api = {
 
 if (process.contextIsolated) {
   try {
-    // contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
     console.error(error)

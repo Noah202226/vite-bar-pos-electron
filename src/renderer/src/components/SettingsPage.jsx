@@ -1,75 +1,218 @@
 import React, { useEffect, useState } from 'react'
 import { useCartStore } from '../store/useCartStore'
-import { X, FolderPlus, Users, Monitor, ShieldCheck, ChevronRight } from 'lucide-react'
+import {
+  X,
+  FolderPlus,
+  Users,
+  Monitor,
+  ShieldCheck,
+  ChevronRight,
+  Tag,
+  AlertCircle,
+  Trash2,
+  Loader2
+} from 'lucide-react'
+import DeleteConfirmModal from './Settings/DeleteConfirmModal'
 
 // --- CATEGORY SETTINGS SUB-COMPONENT ---
+import toast, { Toaster } from 'react-hot-toast'
+import { Plus } from 'lucide-react' // Add Plus to your imports
+
 function CategorySettings() {
+  const { categories, fetchCategories } = useCartStore()
   const [newCategoryName, setNewCategoryName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { categories, setCategories, fetchCategories } = useCartStore()
+  const [isAdding, setIsAdding] = useState(false)
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, id: null, name: '' })
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    if (categories.length === 0) fetchCategories()
-  }, [fetchCategories, categories.length])
+    fetchCategories()
+  }, [fetchCategories])
 
+  // --- ADD CATEGORY LOGIC ---
   const handleAddCategory = async (e) => {
     e.preventDefault()
     if (!newCategoryName.trim()) return
 
-    setLoading(true)
-    const result = await window.api.addCategory(newCategoryName.trim())
+    setIsAdding(true)
+    const addPromise = window.api.addCategory(newCategoryName.trim())
 
-    if (result.success) {
-      setCategories([...categories, result.category])
-      setNewCategoryName('')
-    } else {
-      alert('Error: ' + result.error)
+    toast.promise(
+      addPromise,
+      {
+        loading: 'Creating category...',
+        success: (result) => {
+          if (result.success) {
+            setNewCategoryName('')
+            fetchCategories()
+            return `Category "${result.category.name}" added!`
+          }
+          throw new Error(result.error || 'Failed to add')
+        },
+        error: (err) => `${err.message}`
+      },
+      {
+        style: {
+          background: '#0f172a',
+          color: '#f8fafc',
+          border: '1px solid #1e293b',
+          borderRadius: '16px',
+          fontSize: '12px',
+          fontWeight: '900',
+          textTransform: 'uppercase',
+          padding: '16px'
+        },
+        success: {
+          iconTheme: { primary: '#4f46e5', secondary: '#fff' }
+        }
+      }
+    )
+
+    try {
+      await addPromise
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsAdding(false)
     }
-    setLoading(false)
+  }
+
+  const openDeleteModal = (id, name) => {
+    setModalConfig({ isOpen: true, id, name })
+  }
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true)
+    const deletePromise = window.api.deleteCategory(modalConfig.id)
+
+    toast.promise(
+      deletePromise,
+      {
+        loading: 'Deleting...',
+        success: (result) => {
+          if (result.success) {
+            fetchCategories()
+            setModalConfig({ ...modalConfig, isOpen: false })
+            return `Category removed.`
+          }
+          throw new Error(result.error || 'Failed to delete')
+        },
+        error: (err) => `${err.message}`
+      },
+      {
+        style: {
+          background: '#0f172a',
+          color: '#f8fafc',
+          border: '1px solid #1e293b',
+          borderRadius: '16px',
+          fontSize: '12px',
+          fontWeight: '900',
+          textTransform: 'uppercase',
+          padding: '16px'
+        }
+      }
+    )
+
+    try {
+      await deletePromise
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div>
-        <h3 className="text-xl font-black text-white tracking-tight mb-1">Product Categories</h3>
-        <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">
-          Organize your menu structure
-        </p>
-      </div>
-
-      <form onSubmit={handleAddCategory} className="flex gap-3">
-        <input
-          type="text"
-          placeholder="New Category Name..."
-          value={newCategoryName}
-          onChange={(e) => setNewCategoryName(e.target.value)}
-          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700 font-bold"
-          required
-        />
-        <button
-          type="submit"
-          disabled={loading || !newCategoryName.trim()}
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-black px-6 rounded-xl transition-all flex items-center gap-2"
-        >
-          {loading ? '...' : <FolderPlus size={18} />}
-          ADD
-        </button>
-      </form>
-
-      <div className="grid grid-cols-2 gap-3">
-        {categories.map((cat) => (
-          <div
-            key={cat._id}
-            className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex justify-between items-center group hover:border-indigo-500/50 transition-all"
-          >
-            <span className="text-slate-200 font-bold tracking-tight">{cat.name}</span>
-            <ChevronRight
+    <div className="space-y-6">
+      {/* ADD CATEGORY INPUT SECTION */}
+      <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 relative group">
+            <Tag
               size={14}
-              className="text-slate-600 group-hover:text-indigo-400 transition-colors"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors"
+            />
+            <input
+              type="text"
+              placeholder="Enter new category name..."
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCategory(e)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold text-white outline-none focus:border-indigo-500 transition-all placeholder:text-slate-600 uppercase tracking-widest"
             />
           </div>
-        ))}
+          <button
+            onClick={handleAddCategory}
+            disabled={isAdding || !newCategoryName.trim()}
+            className="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-2xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
+          >
+            {isAdding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+            <span className="text-[10px] font-black uppercase tracking-widest">Add Category</span>
+          </button>
+        </div>
       </div>
+
+      {/* CATEGORY LIST SECTION */}
+      <div className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden">
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/20">
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-white">
+              Menu Categories
+            </h3>
+            <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">
+              Manage your classification tags
+            </p>
+          </div>
+          <FolderPlus size={18} className="text-indigo-500" />
+        </div>
+
+        <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+          {categories.length === 0 ? (
+            <div className="py-10 text-center text-slate-600 text-[10px] font-bold uppercase tracking-widest">
+              No categories found
+            </div>
+          ) : (
+            categories.map((cat) => (
+              <div
+                key={cat._id}
+                className="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-2xl group hover:border-slate-700 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center">
+                    <span className="text-xs font-black text-indigo-500">
+                      {cat.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="font-bold text-slate-200 uppercase text-[11px] tracking-wider">
+                    {cat.name}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => openDeleteModal(cat._id, cat.name)}
+                  className="p-2 rounded-xl text-slate-600 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="p-4 bg-amber-500/5 border-t border-slate-800 flex gap-3 items-start">
+          <AlertCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[9px] text-slate-500 font-medium leading-relaxed italic">
+            * Warning: Deleting a category does not delete the products inside it.
+          </p>
+        </div>
+      </div>
+
+      <DeleteConfirmModal
+        isOpen={modalConfig.isOpen}
+        loading={isDeleting}
+        itemName={modalConfig.name}
+        title="Delete Category"
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }
