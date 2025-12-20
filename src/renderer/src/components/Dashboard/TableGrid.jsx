@@ -13,7 +13,7 @@ export default function TableGrid() {
   }, [])
 
   // DEBUG LOG: Open "View > Toggle Developer Tools" in your app to see this
-  console.log('Current Floor Status:', floorStatus)
+  // console.log('Current Floor Status:', floorStatus)
 
   const zones = [
     { id: 'V1', type: 'vip', label: 'V1' },
@@ -25,13 +25,15 @@ export default function TableGrid() {
     { id: '5', type: 'standard', label: '5' },
     { id: '6', type: 'standard', label: '6' },
     { id: '7', type: 'standard', label: '7' },
-    { id: '8', type: 'standard', label: '8' }
+    { id: '8', type: 'standard', label: '8' },
+    { id: '9', type: 'standard', label: '9' },
+    { id: '10', type: 'standard', label: '10' }
   ]
 
   return (
     <div className="flex-1 p-8 bg-slate-950 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="mb-6 flex justify-between items-end shrink-0">
+      <div className="mb-6 flex justify-between items-end shrink-0 p-2">
         <div>
           <h2 className="text-3xl font-black text-white tracking-tighter">Floor Management</h2>
           <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
@@ -49,11 +51,15 @@ export default function TableGrid() {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50" /> VIP
           </div>
+          <div className="flex items-center gap-2">
+            <CalendarCheck size={14} className="text-amber-500" />
+            Reserved
+          </div>
         </div>
       </div>
 
       {/* Grid */}
-      <div className="flex-1 grid grid-cols-5 gap-4">
+      <div className="flex-1 grid grid-cols-3 gap-4">
         {zones.map((zone) => {
           const tableOrder = floorStatus.find((o) => String(o.tableNumber) === String(zone.id))
           const isSelected = activeOrder?.tableNumber === zone.id
@@ -73,7 +79,7 @@ export default function TableGrid() {
                 useOrderStore.getState().toggleReservation(zone.id)
               }}
               className={`
-        relative rounded-3xl border transition-all duration-300 flex flex-col items-center justify-center gap-1 group
+        relative rounded-3xl border transition-all duration-300 flex flex-col items-center justify-center gap-1 group h-25 hover:border-6 hover: cursor-pointer
         ${
           isSelected
             ? 'bg-indigo-600 border-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.4)]'

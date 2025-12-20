@@ -38,7 +38,7 @@ import { PosPrinter } from 'electron-pos-printer'
 //   return settingsWindow
 // }
 
-export function createFeatureWindow(parent, route, width = 800, height = 600) {
+export function createFeatureWindow(parent, route, width = 900, height = 700) {
   const featureWindow = new BrowserWindow({
     parent: parent, // Links it to the main dashboard
     modal: true, // Blocks interaction with dashboard until closed
@@ -153,13 +153,12 @@ app.whenReady().then(() => {
 
   ipcMain.on('window:open-sales-report', (event) => {
     const parent = BrowserWindow.fromWebContents(event.sender)
-    // Route must match your React Router route (e.g., /sales-report)
-    createFeatureWindow(parent, 'sales-report', 1100, 800)
+    createFeatureWindow(parent, 'sales-report', 1100, 800) // Corrected route name
   })
 
   ipcMain.on('window:open-add-product', (event) => {
     const parent = BrowserWindow.fromWebContents(event.sender)
-    createFeatureWindow(parent, 'add-product', 600, 700)
+    createFeatureWindow(parent, 'add-product', 900, 700)
   })
 
   app.on('activate', function () {

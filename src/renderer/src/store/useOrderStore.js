@@ -7,16 +7,14 @@ export const useOrderStore = create((set, get) => ({
   salesData: [],
 
   // FIXED: This now calls getSalesReport (data), not openSettingsWindow (UI)
-  fetchSalesReport: async (date = new Date()) => {
-    set({ isLoading: true })
+  fetchSalesReport: async (startDate, endDate) => {
     try {
-      // Ensure we pass a plain string or date object as expected by the backend
-      const data = await window.api.getSalesReport(date)
-      console.log('Sales Data Fetched:', data)
-      set({ salesData: data || [], isLoading: false })
+      // Pass both dates to the preload API
+      const data = await window.api.getSalesReport(startDate, endDate)
+      set({ salesData: data })
     } catch (error) {
-      console.error('Failed to fetch sales report:', error)
-      set({ salesData: [], isLoading: false })
+      console.error('Failed to load sales report:', error)
+      set({ salesData: [] })
     }
   },
   loadTableOrder: async (tableNumber) => {
@@ -40,7 +38,7 @@ export const useOrderStore = create((set, get) => ({
   fetchFloorStatus: async () => {
     try {
       const orders = await window.api.getFloorStatus('db:get-floor-status') // Ensure you expose this in preload!
-      console.log('Store updated with:', orders)
+      // console.log('Store updated with:', orders)
       set({ floorStatus: orders })
     } catch (error) {
       console.error('Failed to fetch floor status', error)

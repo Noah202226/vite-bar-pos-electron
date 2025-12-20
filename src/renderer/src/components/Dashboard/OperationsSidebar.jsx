@@ -10,6 +10,7 @@ import {
   Settings,
   BarChart3
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function OperationsSidebar() {
   const handleOpenSettings = () => {
@@ -17,7 +18,11 @@ export default function OperationsSidebar() {
   }
 
   const handleOpenSalesReport = () => {
-    window.api.openSalesReport() // Triggers the 'window:open-sales-report' IPC
+    try {
+      window.api.openSalesReport() // Triggers the 'window:open-sales-report' IPC
+    } catch (e) {
+      toast.error('Err:', e)
+    }
   }
 
   return (
@@ -28,7 +33,7 @@ export default function OperationsSidebar() {
         </h2>
       </div>
 
-      <div className="flex-1 p-6 space-y-8 overflow-y-auto">
+      <div className="flex-1 p-6 space-y-8 overflow-y-auto mt-20">
         <section>
           <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4">
             Transaction Control
@@ -37,21 +42,22 @@ export default function OperationsSidebar() {
             <WideOpButton
               icon={<Trash2 />}
               label="Void Entire Order"
-              color="hover:border-red-500 text-red-400"
+              color="hover:border-red-500 text-red-400 m-20"
             />
             <WideOpButton
               icon={<Tag />}
               label="Apply Discount"
               color="hover:border-amber-500 text-amber-400"
             />
-            <WideOpButton
+            {/* <WideOpButton
               icon={<Calculator />}
               label="Split Bill / Items"
               color="hover:border-indigo-500 text-indigo-400"
             />
+            */}
             <WideOpButton
               icon={<Users />}
-              label="Merge Table"
+              label="Payroll"
               color="hover:border-emerald-500 text-emerald-400"
             />
             <WideOpButton
@@ -101,9 +107,10 @@ export default function OperationsSidebar() {
   )
 }
 
-function WideOpButton({ icon, label, color }) {
+function WideOpButton({ icon, label, color, onClick }) {
   return (
     <button
+      onClick={onClick}
       className={`w-full flex items-center gap-4 p-4 bg-slate-800/40 border border-slate-800 rounded-2xl transition-all active:scale-95 ${color}`}
     >
       <div className="shrink-0">{icon}</div>

@@ -291,27 +291,21 @@ export function registerIpcHandlers() {
     // await printFunction(receiptHtml);
   })
 
-  ipcMain.handle('db:get-sales-report', async (event, { date }) => {
-    try {
-      const start = new Date(date)
-      start.setHours(0, 0, 0, 0)
+  ipcMain.handle('db:get-sales-report', async (_, { start, end }) => {
+    const startTime = new Date(start)
+    startTime.setHours(0, 0, 0, 0)
 
-      const end = new Date(date)
-      end.setHours(23, 59, 59, 999)
+    const endTime = new Date(end)
+    endTime.setHours(23, 59, 59, 999)
 
-      console.log(`Fetching sales for: ${start.toISOString()}`)
-
-      const sales = await Order.find({
-        status: 'paid',
-        closedAt: { $gte: start, $lte: end }
-      })
-        .sort({ closedAt: -1 })
-        .lean()
-
-      return JSON.parse(JSON.stringify(sales))
-    } catch (error) {
-      console.error('Failed to fetch sales report:', error)
-      return []
-    }
+    return await Order.find({
+      status: 'paid',
+      closedAt: {
+        $gte: startTime,
+        $lte: endTime
+      }
+    })
+      .sort({ closedAt: -1 })
+      .lean()
   })
 }

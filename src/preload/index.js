@@ -24,13 +24,13 @@ const api = {
 
   // --- REPORTING (Data Fetching) ---
   // This fetches the data arrays
-  getSalesReport: (date) => ipcRenderer.invoke('db:get-sales-report', { date }),
+  getSalesReport: (start, end) => ipcRenderer.invoke('db:get-sales-report', { start, end }),
 
   // --- WINDOW MANAGEMENT (UI Triggers) ---
   // These only tell Main process to open a new window
   openAddProductWindow: () => ipcRenderer.send('window:open-add-product'),
   openSettingsWindow: () => ipcRenderer.send('window:open-settings'),
-  openSalesReport: () => ipcRenderer.send('window:open-sales-report') // Fixed missing handler
+  openSalesReport: () => ipcRenderer.send('window:open-sales-report')
 }
 
 if (process.contextIsolated) {
