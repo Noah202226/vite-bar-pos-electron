@@ -3,6 +3,7 @@ import { Product } from './db/models/Product'
 import { User } from './db/models/User'
 import { Category } from './db/models/Category'
 import { Order } from './db/models/Order'
+import { ProductMonitoring } from './db/models/ProductMonitoring'
 
 export function registerIpcHandlers() {
   // Handler to fetch all products
@@ -17,33 +18,130 @@ export function registerIpcHandlers() {
     }
   })
   // Handler to add a new product
-  ipcMain.handle('db:add-product', async (event, productData) => {
+  ipcMain.handle(
+    'db:add-product',
+    async (event, { name, category, price, currentStock, lowStockAlert, logData }) => {
+      console.log('Adding product with data:', {
+        name,
+        category,
+        price,
+        currentStock,
+        lowStockAlert,
+        logData
+      })
+
+      try {
+        // Assuming you have a Product model. If not, I can provide the Schema.
+        // const newProduct = new Product(productData)
+        // await newProduct.save()
+
+        // 1. Save the Product
+        const newProduct = new Product({ name, category, price, currentStock, lowStockAlert })
+        const savedProduct = await newProduct.save()
+
+        // 2. Save the Monitoring Log
+        const monitoringLog = new ProductMonitoring({
+          productId: savedProduct._id,
+          productName: savedProduct.name,
+          type: 'INITIAL_SETUP',
+          change: `Added - ${savedProduct.currentStock}`,
+          remainingStock: savedProduct.currentStock,
+          performedBy: logData.user,
+          note: logData.note || 'Initial inventory entry',
+          timestamp: logData.timestamp
+        })
+        await monitoringLog.save()
+
+        return { success: true, product: JSON.parse(JSON.stringify(newProduct)) }
+      } catch (error) {
+        console.error('Error adding product:', error)
+        return { success: false, error: error.message }
+      }
+    }
+  )
+
+  // Handler to update a product
+  ipcMain.handle('db:update-product', async (event, id, payload) => {
+    // Destructure everything from the payload
+    const { name, category, price, currentStock, lowStockAlert, logData } = payload
+
+    console.log('updating product with data:', {
+      id,
+      name,
+      category,
+      price,
+      currentStock,
+      lowStockAlert,
+      logData
+    })
+    const data = { name, category, price, currentStock, lowStockAlert }
+
     try {
-      // Assuming you have a Product model. If not, I can provide the Schema.
-      const newProduct = new Product(productData)
-      await newProduct.save()
-      return { success: true, product: JSON.parse(JSON.stringify(newProduct)) }
+      // 1. Get current product to calculate stock difference
+      const oldProduct = await Product.findById(id)
+      if (!oldProduct) throw new Error('Product not found')
+
+      const stockChange = (data.currentStock || oldProduct.currentStock) - oldProduct.currentStock
+
+      // 2. Perform Update
+      const updated = await Product.findByIdAndUpdate(id, { $set: data }, { new: true }).lean()
+
+      // 3. Log the Monitoring activity
+      const monitoringLog = new ProductMonitoring({
+        productId: id,
+        productName: updated.name,
+        type: 'UPDATE',
+        change: `${stockChange >= 0 ? 'Added' : 'Removed'} - ${Math.abs(stockChange)}`,
+        remainingStock: updated.currentStock,
+        performedBy: logData.user,
+        note: logData.note || 'Manual info update',
+        timestamp: new Date()
+      })
+      await monitoringLog.save()
+
+      return { success: true, product: JSON.parse(JSON.stringify(updated)) }
     } catch (error) {
-      console.error('Error adding product:', error)
       return { success: false, error: error.message }
     }
   })
+
   // Handler to delete a product
-  ipcMain.handle('db:delete-product', async (event, id) => {
+  ipcMain.handle('db:delete-product', async (event, id, logData) => {
     try {
+      const product = await Product.findById(id)
+      if (!product) throw new Error('Product not found')
+
+      // 1. Log the VOID/DELETE action before the product record is gone
+      const monitoringLog = new ProductMonitoring({
+        productId: id,
+        productName: product.name,
+        type: 'VOID_DELETE',
+        change: -product.currentStock, // Stock effectively becomes 0
+        remainingStock: 0,
+        performedBy: logData.user,
+        note: logData.note || 'Permanent deletion',
+        timestamp: new Date()
+      })
+      await monitoringLog.save()
+
+      // 2. Remove the actual product
       await Product.findByIdAndDelete(id)
+
       return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
     }
   })
-  // Handler to update a product
-  ipcMain.handle('db:update-product', async (event, { id, data }) => {
+  ipcMain.handle('db:get-inventory-logs', async () => {
     try {
-      const updated = await Product.findByIdAndUpdate(id, { $set: data }, { new: true }).lean()
-      return { success: true, product: JSON.parse(JSON.stringify(updated)) }
+      const logs = await ProductMonitoring.find({})
+        .sort({ timestamp: -1 }) // Newest first
+        .limit(100)
+        .lean()
+      return JSON.parse(JSON.stringify(logs))
     } catch (error) {
-      return { success: false, error: error.message }
+      console.error('Error fetching logs:', error)
+      return []
     }
   })
 

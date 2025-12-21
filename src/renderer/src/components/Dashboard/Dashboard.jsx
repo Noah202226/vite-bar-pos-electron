@@ -7,6 +7,9 @@ import ProductInventoryList from './ProductInventoryList' // <--- New Component
 import OperationsSidebar from './OperationsSidebar'
 import { Megaphone } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
+import { useHistoryStore } from '../../store/useHistoryStore'
+import { useAuthStore } from '../../store/useAuthStore'
+import HistoryDrawer from './HistoryDrawer'
 
 export default function Dashboard({ user, onLogout }) {
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -19,6 +22,7 @@ export default function Dashboard({ user, onLogout }) {
 
   return (
     <div className="h-screen flex flex-col bg-slate-950 text-slate-200 font-sans overflow-hidden">
+      <HistoryDrawer />
       <DashboardHeader user={user} currentTime={currentTime} onLogout={onLogout} />
 
       <div className="flex flex-1 overflow-hidden">

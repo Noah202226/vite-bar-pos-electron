@@ -11,14 +11,18 @@ import {
   Edit,
   Trash2,
   Save,
-  User
+  TriangleAlert,
+  History
 } from 'lucide-react'
 import { useAuthStore } from '../../store/useAuthStore'
 import toast from 'react-hot-toast'
+import { useHistoryStore } from '../../store/useHistoryStore'
 
 export default function ProductInventoryList() {
   const { products, categories, fetchProducts, fetchCategories } = useCartStore()
   const { user } = useAuthStore((state) => state)
+
+  const { openProductHistory } = useHistoryStore()
 
   // --- Local State for UI ---
   const [selectedCategory, setSelectedCategory] = useState('All')
@@ -107,10 +111,18 @@ export default function ProductInventoryList() {
     const toastId = toast.loading('Deleting product...')
 
     try {
-      const result = await window.api.deleteProduct(productToDelete._id)
+      const logData = {
+        type: 'VOID_DELETE',
+        user: user?.username || 'Unknown',
+        timestamp: new Date().toISOString(),
+        note: `Product "${productToDelete.name}" permanently removed.`
+      }
+
+      const result = await window.api.deleteProduct(productToDelete._id, logData)
+
       if (result.success) {
         fetchProducts()
-        toast.success('Product removed from inventory', { id: toastId })
+        toast.success('Product and history archived', { id: toastId })
         setIsDeleteModalOpen(false)
       } else {
         toast.error(result.error || 'Delete failed', { id: toastId })
@@ -140,22 +152,33 @@ export default function ProductInventoryList() {
         createdBy: currentUser // Sending user info to DB
       }
 
+      console.log('Payload for submit:', payload)
+
+      // MONITORING LOG DATA
+      const logData = {
+        user: currentUser,
+        timestamp: new Date().toISOString(),
+        // If no _id, it's 'INITIAL', else it's an 'UPDATE'
+        type: formData._id ? 'UPDATE' : 'INITIAL_SETUP',
+        stockAtEvent: payload.currentStock,
+        note: formData._id ? `Manual update by ${currentUser}` : 'Product first entry'
+      }
+
       let result
       if (formData._id) {
         // UPDATE
-        result = await window.api.updateProduct(formData._id, payload)
+        result = await window.api.updateProduct(formData._id, { ...payload, logData })
       } else {
         // CREATE
-        result = await window.api.addProduct(payload)
+        result = await window.api.addProduct({ ...payload, logData })
       }
 
       if (result.success) {
         setIsModalOpen(false)
         fetchProducts()
-
-        toast.success(`Product ${formData._id ? 'updated' : 'added'} successfully`, { id: toastId })
+        toast.success(`Inventory updated and logged`, { id: toastId })
       } else {
-        alert('Operation failed: ' + (result.error || 'Unknown error'))
+        toast.error(result.error || 'Failed', { id: toastId })
       }
     } catch (error) {
       toast.error('Check your connection or data format', { id: toastId })
@@ -313,14 +336,26 @@ export default function ProductInventoryList() {
                   {/* Action Buttons */}
                   <td className="py-3 text-right rounded-r-2xl pr-4">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* VIEW HISTORY BUTTON - Admin Only */}
+                      {user?.role == 'Admin' && (
+                        <button
+                          onClick={() => openProductHistory(product._id)}
+                          className="p-1.5 rounded-lg bg-slate-800 text-amber-400 hover:bg-amber-600 hover:text-white transition-colors"
+                          title="View Product History"
+                        >
+                          <History size={14} />
+                        </button>
+                      )}
+
                       <button
                         onClick={() => handleEdit(product)}
                         className="p-1.5 rounded-lg bg-slate-800 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-colors"
                       >
                         <Edit size={14} />
                       </button>
+
                       <button
-                        onClick={() => handleDelete(product._id)}
+                        onClick={() => confirmDelete(product)}
                         className="p-1.5 rounded-lg bg-slate-800 text-rose-500 hover:bg-rose-600 hover:text-white transition-colors"
                       >
                         <Trash2 size={14} />
@@ -445,6 +480,42 @@ export default function ProductInventoryList() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- THEMED DELETE CONFIRMATION MODAL --- */}
+      {isDeleteModalOpen && (
+        <div className="absolute inset-0 z-100 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div className="p-8 flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mb-2">
+                <TriangleAlert size={32} />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">
+                Archive Product?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                You are about to delete{' '}
+                <span className="text-indigo-400 font-bold">{productToDelete?.name}</span>. This
+                will create a <span className="text-rose-500 font-bold uppercase">Void</span> log in
+                the monitoring system.
+              </p>
+            </div>
+            <div className="flex border-t border-slate-800">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-600 hover:text-white transition-colors border-l border-slate-800"
+              >
+                Confirm Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

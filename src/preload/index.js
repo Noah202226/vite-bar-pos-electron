@@ -4,8 +4,9 @@ const api = {
   // --- Database / Product Handlers ---
   getProducts: () => ipcRenderer.invoke('db:get-products'),
   addProduct: (data) => ipcRenderer.invoke('db:add-product', data),
-  updateProduct: (id, data) => ipcRenderer.invoke('db:update-product', { id, data }),
-  deleteProduct: (id) => ipcRenderer.invoke('db:delete-product', id),
+  updateProduct: (id, data) => ipcRenderer.invoke('db:update-product', id, data),
+  deleteProduct: (id, logData) => ipcRenderer.invoke('db:delete-product', id, logData),
+  getInventoryLogs: () => ipcRenderer.invoke('db:get-inventory-logs'),
 
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
   addCategory: (name) => ipcRenderer.invoke('db:add-category', name),

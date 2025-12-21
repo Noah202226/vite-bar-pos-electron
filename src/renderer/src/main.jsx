@@ -9,15 +9,15 @@ import { Toaster } from 'react-hot-toast'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Toaster
-      position="top-right"
+      position="top-center"
       reverseOrder={false}
       toastOptions={{
         style: {
           background: '#0f172a',
           color: '#fff',
-          border: '1px solid #1e293b',
+          border: '2px solid #1e293b',
           borderRadius: '16px',
-          fontSize: '11px',
+          fontSize: '12px',
           fontWeight: 'bold',
           textTransform: 'uppercase'
         }
