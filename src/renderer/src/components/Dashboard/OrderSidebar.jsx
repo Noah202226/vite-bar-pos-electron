@@ -1,9 +1,9 @@
 import React from 'react'
-import { Receipt, Trash2 } from 'lucide-react'
+import { Receipt, Trash2, Plus, Minus } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
 
 export default function OrderSidebar() {
-  const { activeOrder, isLoading, checkout } = useOrderStore()
+  const { activeOrder, isLoading, checkout, voidItem, addItem } = useOrderStore()
 
   return (
     <aside className="w-80 lg:w-96 bg-slate-900 border-r border-slate-800 flex flex-col shadow-inner">
@@ -54,10 +54,30 @@ export default function OrderSidebar() {
                   ₱{(item.price * item.quantity).toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">
-                  Qty: {item.quantity}
-                </span>
+
+              <div className="flex justify-between items-center mt-2">
+                <div className="flex items-center gap-3 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                  {/* VOID BUTTON */}
+                  <button
+                    onClick={() => voidItem(item.productId)}
+                    className="p-1.5 hover:bg-rose-500/20 text-rose-500 rounded-md transition-colors"
+                  >
+                    <Minus size={14} strokeWidth={3} />
+                  </button>
+
+                  <span className="text-xs font-black text-white min-w-5 text-center">
+                    {item.quantity}
+                  </span>
+
+                  {/* OPTIONAL ADD BUTTON (Matches the flow) */}
+                  <button
+                    onClick={() => addItem(item)}
+                    className="p-1.5 hover:bg-indigo-500/20 text-indigo-500 rounded-md transition-colors"
+                  >
+                    <Plus size={14} strokeWidth={3} />
+                  </button>
+                </div>
+
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded border italic font-medium ${
                     item.status === 'pending'

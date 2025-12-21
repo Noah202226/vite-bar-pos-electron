@@ -63,7 +63,7 @@ export default function Header({ onLogout }) {
 
       {/* 3. ACTION ZONE & USER PROFILE */}
       <div className="flex items-center gap-4">
-        {/* CONDITIONAL ADMIN TOOLS */}
+        {/* CONDITIONAL ADMIN TOOLS
         {isAdmin && (
           <div className="flex items-center gap-2 mr-4 pr-4 border-r border-slate-800">
             <button
@@ -84,7 +84,7 @@ export default function Header({ onLogout }) {
               <span>Users</span>
             </button>
           </div>
-        )}
+        )} */}
 
         {/* USER INFO */}
         <div className="text-right">

@@ -1,68 +1,64 @@
-// ===================================
-// FILE: src/renderer/src/store/useCartStore.js (Updated)
-// ===================================
 import { create } from 'zustand'
 
+/**
+ * useCartStore: THE CASHIER & INVENTORY
+ * Handles: Master product list, Categories, and Quick Takeout orders.
+ */
 export const useCartStore = create((set) => ({
-  // NEW STATE FIELDS
-  products: [], // All available products fetched from DB
-  productsLoading: false,
+  // --- STATE: PRODUCT LIST ---
+  products: [], // The "Master Catalog" - all items available in your shop
+  productsLoading: false, // UI helper to show a spinner while loading the list from DB
 
-  cartItems: [],
-  totalPrice: 0,
+  // --- STATE: TAKEOUT CART ---
+  cartItems: [], // The temporary "shopping bag" for Takeout/Walk-in customers
+  totalPrice: 0, // Running total cost of items currently in the takeout cart
 
-  // NEW STATE FOR CATEGORIES
-  categories: [],
-  categoriesLoading: false,
+  // --- STATE: CATEGORIES ---
+  categories: [], // List of menu categories (e.g., Coffee, Pastries, Pasta)
+  categoriesLoading: false, // UI helper for the category loading state
 
-  // NEW ACTION: Fetch categories
+  // --- ACTION: FETCH CATEGORIES ---
+  // Connects to DB to get the category names for your filter tabs
   fetchCategories: async () => {
     set({ categoriesLoading: true })
     try {
-      const categoryList = await window.api.getCategories() // Call new IPC handler
-
+      const categoryList = await window.api.getCategories()
       if (categoryList.error) {
-        console.error('Error fetching categories:', categoryList.error)
         set({ categoriesLoading: false })
         return
       }
-
       set({ categories: categoryList, categoriesLoading: false })
     } catch (error) {
-      console.error('IPC error during category fetch:', error)
       set({ categoriesLoading: false })
     }
   },
-  // NEW ACTION: Manually set/update categories (Used after adding a new one)
+
+  // --- ACTION: UPDATE CATEGORIES ---
+  // Manually refreshes the local list (used after you create a new category)
   setCategories: (newCategories) => set({ categories: newCategories }),
 
-  // NEW ACTION: Fetch products via IPC
+  // --- ACTION: FETCH PRODUCTS ---
+  // Pulls the entire menu from the database to display on your inventory/sales screen
   fetchProducts: async () => {
     set({ productsLoading: true })
     try {
-      // Call the IPC handler you defined: 'db:get-products'
       const productList = await window.api.getProducts()
-
       if (productList.error) {
-        console.error('Error fetching from DB:', productList.error)
         set({ productsLoading: false })
         return
       }
-
-      // Store the successful product list in Zustand
       set({ products: productList, productsLoading: false })
     } catch (error) {
-      console.error('IPC error during product fetch:', error)
       set({ productsLoading: false })
     }
   },
 
-  // Existing actions (addItem, clearCart) remain the same
+  // --- ACTION: ADD TO TAKEOUT ---
+  // Puts an item into the 'cartItems' (Takeout).
+  // NOTE: This does NOT save to the database yet. It only stays in app memory.
   addItem: (product, quantity = 1) =>
     set((state) => {
-      // ... (Your existing addItem logic) ...
       const existingItem = state.cartItems.find((item) => item._id === product._id)
-
       let newItems
       if (existingItem) {
         newItems = state.cartItems.map((item) =>
@@ -71,14 +67,11 @@ export const useCartStore = create((set) => ({
       } else {
         newItems = [...state.cartItems, { ...product, quantity }]
       }
-
       const newTotal = newItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
-
-      return {
-        cartItems: newItems,
-        totalPrice: newTotal
-      }
+      return { cartItems: newItems, totalPrice: newTotal }
     }),
 
+  // --- ACTION: CLEAR CART ---
+  // Resets the takeout bag to empty (used after checkout or when canceling)
   clearCart: () => set({ cartItems: [], totalPrice: 0 })
 }))

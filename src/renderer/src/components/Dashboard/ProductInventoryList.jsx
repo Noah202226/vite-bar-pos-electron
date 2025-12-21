@@ -24,6 +24,11 @@ export default function ProductInventoryList() {
 
   const { openProductHistory } = useHistoryStore()
 
+  // --- New Modal States ---
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
+  const [selectedOrderProduct, setSelectedOrderProduct] = useState(null)
+  const [orderQty, setOrderQty] = useState(1)
+
   // --- Local State for UI ---
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
@@ -103,6 +108,17 @@ export default function ProductInventoryList() {
   const confirmDelete = (product) => {
     setProductToDelete(product)
     setIsDeleteModalOpen(true)
+  }
+
+  // Open Order Modal
+  const handleOpenOrder = (product) => {
+    if (product.currentStock <= 0) {
+      toast.error('Product is out of stock!')
+      return
+    }
+    setSelectedOrderProduct(product)
+    setOrderQty(1) // Reset to 1
+    setIsOrderModalOpen(true)
   }
 
   // 3. Handle Delete
@@ -301,10 +317,18 @@ export default function ProductInventoryList() {
                   key={product._id}
                   className="bg-slate-900/40 border border-slate-800 group hover:bg-slate-800/60 transition-all"
                 >
-                  <td className="py-3 pl-4 rounded-l-2xl">
-                    <span className="font-bold text-slate-200 text-sm group-hover:text-indigo-400 transition-colors">
-                      {product.name}
-                    </span>
+                  <td
+                    className="py-3 pl-4 rounded-l-2xl cursor-pointer group/name"
+                    onClick={() => handleOpenOrder(product)}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-200 text-sm group-hover/name:text-indigo-400 transition-colors">
+                        {product.name}
+                      </span>
+                      <span className="text-[9px] text-slate-600 uppercase tracking-tighter">
+                        Click to Order
+                      </span>
+                    </div>
                   </td>
                   <td className="py-3">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-950 px-2 py-1 rounded-md border border-slate-800">
@@ -322,16 +346,6 @@ export default function ProductInventoryList() {
                       {product.currentStock}
                     </div>
                   </td>
-
-                  {/* NEW COLUMN: Last Updated By */}
-                  {/* <td className="py-3">
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <User size={12} />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">
-                        {product.createdBy || 'System'}
-                      </span>
-                    </div>
-                  </td> */}
 
                   {/* Action Buttons */}
                   <td className="py-3 text-right rounded-r-2xl pr-4">
@@ -514,6 +528,83 @@ export default function ProductInventoryList() {
                 className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-600 hover:text-white transition-colors border-l border-slate-800"
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- TAKE OUT ORDER MODAL --- */}
+      {isOrderModalOpen && (
+        <div className="absolute inset-0 z-100 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+            {/* Header */}
+            <div className="p-6 text-center border-b border-slate-800 bg-slate-800/30">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-1">
+                New Takeout Order
+              </p>
+              <h3 className="text-lg font-bold text-white">{selectedOrderProduct?.name}</h3>
+              <p className="text-xs text-slate-500 font-mono">
+                ₱{selectedOrderProduct?.price.toFixed(2)} per unit
+              </p>
+            </div>
+
+            <div className="p-8 flex flex-col items-center gap-6">
+              {/* Quantity Selector */}
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={() => setOrderQty(Math.max(1, orderQty - 1))}
+                  className="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700 active:scale-90 transition-all border border-slate-700"
+                >
+                  <span className="text-2xl font-bold">-</span>
+                </button>
+
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl font-black text-white">{orderQty}</span>
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">
+                    Quantity
+                  </span>
+                </div>
+
+                <button
+                  onClick={() =>
+                    setOrderQty(Math.min(selectedOrderProduct?.currentStock, orderQty + 1))
+                  }
+                  className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-500 active:scale-90 transition-all shadow-lg shadow-indigo-600/20"
+                >
+                  <Plus size={24} strokeWidth={3} />
+                </button>
+              </div>
+
+              {/* Total Summary */}
+              <div className="w-full bg-slate-950 rounded-2xl p-4 border border-slate-800 flex justify-between items-center">
+                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                  Total Amount
+                </span>
+                <span className="text-xl font-black text-indigo-400">
+                  ₱{(selectedOrderProduct?.price * orderQty).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex border-t border-slate-800">
+              <button
+                onClick={() => setIsOrderModalOpen(false)}
+                className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  // Logic to add to cart/order
+                  // addToCart(selectedOrderProduct, orderQty);
+                  toast.success(`Order added: ${orderQty}x ${selectedOrderProduct.name}`)
+                  setIsOrderModalOpen(false)
+                }}
+                className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 transition-colors border-l border-slate-800"
+              >
+                Add to Order
               </button>
             </div>
           </div>

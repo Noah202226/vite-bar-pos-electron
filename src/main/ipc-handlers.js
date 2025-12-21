@@ -1,9 +1,10 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import { Product } from './db/models/Product'
 import { User } from './db/models/User'
 import { Category } from './db/models/Category'
 import { Order } from './db/models/Order'
 import { ProductMonitoring } from './db/models/ProductMonitoring'
+import mongoose from 'mongoose'
 
 export function registerIpcHandlers() {
   // Handler to fetch all products
@@ -136,7 +137,6 @@ export function registerIpcHandlers() {
     try {
       const logs = await ProductMonitoring.find({})
         .sort({ timestamp: -1 }) // Newest first
-        .limit(100)
         .lean()
       return JSON.parse(JSON.stringify(logs))
     } catch (error) {
@@ -278,28 +278,63 @@ export function registerIpcHandlers() {
   })
 
   // Update order items
-  ipcMain.handle('db:update-order-items', async (event, { orderId, items, subtotal, total }) => {
-    try {
-      const updatedOrder = await Order.findByIdAndUpdate(
-        orderId,
-        {
-          $set: {
-            items: items, // Mongoose casts the string productId to ObjectId here
-            subtotal: total,
-            total: total
-          }
-        },
-        { new: true, runValidators: true }
-      ).lean()
+  // ipcMain.handle('db:update-order-items', async (event, { orderId, items, subtotal, total }) => {
+  //   try {
+  //     const updatedOrder = await Order.findByIdAndUpdate(
+  //       orderId,
+  //       {
+  //         $set: {
+  //           items: items, // Mongoose casts the string productId to ObjectId here
+  //           subtotal: total,
+  //           total: total
+  //         }
+  //       },
+  //       { new: true, runValidators: true }
+  //     ).lean()
 
-      // Crucial: Use JSON stringify/parse to remove Mongoose-specific logic
-      // before sending the data back across the bridge to React.
-      return JSON.parse(JSON.stringify(updatedOrder))
-    } catch (error) {
-      console.error('Database Save Error:', error)
-      return { success: false, error: error.message }
+  //     // Crucial: Use JSON stringify/parse to remove Mongoose-specific logic
+  //     // before sending the data back across the bridge to React.
+  //     return JSON.parse(JSON.stringify(updatedOrder))
+  //   } catch (error) {
+  //     console.error('Database Save Error:', error)
+  //     return { success: false, error: error.message }
+  //   }
+  // })
+  ipcMain.handle(
+    'db:update-order-items',
+    async (event, { orderId, items, total, inventoryUpdate, currentUser }) => {
+      try {
+        // 1. Update the Order Items
+        await Order.findByIdAndUpdate(orderId, { items, total })
+
+        if (inventoryUpdate) {
+          const { productId, adjustment, tableNumber } = inventoryUpdate
+
+          // 2. Adjust Product Stock & Get the new balance
+          const product = await Product.findByIdAndUpdate(
+            productId,
+            { $inc: { currentStock: adjustment } },
+            { new: true } // returns the document AFTER the update
+          )
+
+          // 3. Create the Monitoring Log using your schema
+          await ProductMonitoring.create({
+            productId: productId,
+            type: adjustment < 0 ? 'SALE' : 'VOID_DELETE',
+            change: adjustment < 0 ? `Sold x${Math.abs(adjustment)}` : `Voided x${adjustment}`,
+            remainingStock: product.currentStock, // Snapshot of stock after change
+            performedBy: currentUser || 'Unknown User',
+            note: `Table ${tableNumber} - ${adjustment < 0 ? 'Order added' : 'Item removed'}`
+          })
+        }
+
+        return { success: true }
+      } catch (error) {
+        console.error('Monitoring Error:', error)
+        return { error: error.message }
+      }
     }
-  })
+  )
 
   // Get active order for a table or create one
   ipcMain.handle('db:get-table-order', async (event, tableNumber) => {
@@ -367,53 +402,134 @@ export function registerIpcHandlers() {
     }
   })
 
-  ipcMain.handle('db:checkout-order', async (event, { orderId }) => {
+  ipcMain.handle('db:checkout-order', async (event, { orderId, transactBy, userId }) => {
     try {
+      // 1. Sanitize the userId input
+      let finalUserId = null
+
+      // Check if userId is a valid 24-character hex string
+      if (userId && typeof userId === 'string' && userId.length === 24) {
+        finalUserId = new mongoose.Types.ObjectId(userId)
+      } else if (userId && typeof userId === 'object' && userId.id) {
+        // Fallback for some BSON structures
+        finalUserId = new mongoose.Types.ObjectId(userId.id)
+      }
+
+      // 2. Perform the Update
       const finalizedOrder = await Order.findByIdAndUpdate(
         orderId,
         {
           $set: {
             status: 'paid',
             closedAt: new Date(),
-            isReserved: false // Automatically clear reservation on pay
+            isReserved: false,
+            openedBy: transactBy,
+            userId: finalUserId
           }
         },
         { new: true }
       ).lean()
 
+      if (!finalizedOrder) throw new Error('Order not found')
+
+      // 3. Return a clean JSON object (strips Mongoose magic)
       return JSON.parse(JSON.stringify(finalizedOrder))
     } catch (error) {
-      console.error('Checkout Error:', error)
-      return { error: 'Failed to process payment' }
+      console.error('Checkout IPC Error:', error)
+      return { error: error.message }
     }
   })
   ipcMain.handle('print-receipt', async (event, order) => {
+    const printWindow = new BrowserWindow({
+      show: false, // Keep it hidden
+      webPreferences: { sandbox: false }
+    })
+
     const receiptHtml = `
-    <div style="width: 80mm; font-family: monospace; font-size: 12px;">
-      <h2 style="text-align: center;">VHYPE POS</h2>
-      <p style="text-align: center;">Table: ${order.tableNumber}</p>
-      <hr>
-      ${order.items
-        .map(
-          (item) => `
-        <div style="display: flex; justify-content: space-between;">
-          <span>${item.quantity}x ${item.name}</span>
-          <span>₱${(item.price * item.quantity).toFixed(2)}</span>
+    <html>
+      <body style="margin: 0; padding: 0;">
+        <div style="width: 80mm; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px;">
+          <h2 style="text-align: center;">VHYPE POS</h2>
+          <p style="text-align: center;">Table: ${order.tableNumber}</p>
+          <hr>
+          ${order.items
+            .map(
+              (item) => `
+            <div style="display: flex; justify-content: space-between;">
+              <span>${item.quantity}x ${item.name}</span>
+              <span>₱${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          `
+            )
+            .join('')}
+          <hr>
+          <div style="display: flex; justify-content: space-between; font-weight: bold;">
+            <span>TOTAL:</span>
+            <span>₱${order.total.toFixed(2)}</span>
+          </div>
+          <p style="text-align: center; margin-top: 20px;">Thank you! Come again.</p>
         </div>
-      `
-        )
-        .join('')}
-      <hr>
-      <div style="display: flex; justify-content: space-between; font-weight: bold;">
-        <span>TOTAL:</span>
-        <span>₱${order.total.toFixed(2)}</span>
-      </div>
-      <p style="text-align: center; margin-top: 20px;">Thank you! Come again.</p>
-    </div>
+      </body>
+    </html>
   `
 
-    // Use your existing printing logic here (e.g., hidden window print)
-    // await printFunction(receiptHtml);
+    // Load HTML via Data URL
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml)}`)
+
+    // CRITICAL: Wait for the "did-finish-load" and then add a small delay
+    return new Promise((resolve) => {
+      printWindow.webContents.on('did-finish-load', () => {
+        // Give the renderer 500ms to actually paint the pixels before printing
+        setTimeout(() => {
+          printWindow.webContents.print(
+            {
+              silent: false,
+              printBackground: true,
+              margins: { marginType: 'none' },
+              pageSize: { width: 80000, height: 200000 }
+            },
+            (success, failureReason) => {
+              printWindow.close()
+              resolve(success ? { success: true } : { error: failureReason })
+            }
+          )
+        }, 500) // Adjust to 1000 if it still prints blank
+      })
+    })
+  })
+  // In your ipcHandlers.ts file
+
+  ipcMain.handle('print-test-thermal', async () => {
+    const testWindow = new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: false }
+    })
+
+    // 1. We keep the CSS width, but remove the print command width
+    const testHtml = `
+    <html>
+      <body style="margin: 0; padding: 0; font-family: 'Courier New', monospace; width: 100%; max-width: 58mm;">
+        <div style="padding-bottom: 50px; text-align: center;">
+          <h2 style="margin: 0;">VHYPE POS</h2>
+          <p>--------------------------------</p>
+          <p style="text-align: left;">PRINTER TEST</p>
+          <p style="text-align: left;">Date: ${new Date().toLocaleTimeString()}</p>
+          <p>--------------------------------</p>
+          <b style="font-size: 16px;">IT WORKS!</b>
+          <br /><br />
+          <p>.</p>
+        </div>
+      </body>
+    </html>
+  `
+
+    await testWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(testHtml)}`)
+
+    const printers = await testWindow.webContents.getPrintersAsync()
+    const thermalPrinter =
+      printers.find((p) => p.name === 'POS-58') || printers.find((p) => p.isDefault)
+
+    if (!thermalPrinter) return { success: false, error: 'No printer found' }
   })
 
   ipcMain.handle('db:get-sales-report', async (_, { start, end }) => {

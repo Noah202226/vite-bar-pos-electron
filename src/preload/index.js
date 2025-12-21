@@ -24,7 +24,11 @@ const api = {
   getFloorStatus: () => ipcRenderer.invoke('db:get-floor-status'),
   toggleReservation: (data) => ipcRenderer.invoke('db:toggle-reservation', data),
   checkoutOrder: (data) => ipcRenderer.invoke('db:checkout-order', data),
+
   printOrderReceipt: (orderData) => ipcRenderer.invoke('print-receipt', orderData),
+  testThermalPrinter: () => ipcRenderer.invoke('print-test-thermal'),
+  printReceipt: (htmlContent) => ipcRenderer.invoke('print-html', htmlContent),
+  testPrintHtml: (html) => ipcRenderer.invoke('print-html', html),
 
   // --- REPORTING (Data Fetching) ---
   // This fetches the data arrays

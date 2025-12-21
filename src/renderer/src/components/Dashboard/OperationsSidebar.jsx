@@ -8,7 +8,8 @@ import {
   UserX,
   History,
   Settings,
-  BarChart3
+  BarChart3,
+  Printer
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -22,6 +23,33 @@ export default function OperationsSidebar() {
       window.api.openSalesReport() // Triggers the 'window:open-sales-report' IPC
     } catch (e) {
       toast.error('Err:', e)
+    }
+  }
+
+  const handleTestPrint = async () => {
+    console.log('Initiating test print to POS-58 thermal printer')
+
+    // 1. Create a 58mm specific test design
+    const testHtml = `
+      <html>
+        <body style="width: 58mm; font-family: monospace; padding: 10px;">
+          <div style="text-align: center;">
+            <h2>VHYPE POS</h2>
+            <p>Printer NAME: POS-58</p>
+            <p>${new Date().toLocaleString()}</p>
+            <p>-------------------------</p>
+            <p>Ready to Print</p>
+            <br/><br/>.
+          </div>
+        </body>
+      </html>
+    `
+    try {
+      // 2. Send to the 'print-html' handler in index.js
+      await window.api.testPrintHtml(testHtml)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to send test: ' + err.message)
     }
   }
 
@@ -68,6 +96,25 @@ export default function OperationsSidebar() {
             />
           </div>
         </section>
+
+        <div className="mt-auto p-2 bg-slate-900/50 border-t border-slate-800 rounded-b-2xl">
+          <div className="flex items-center justify-between">
+            {/* <div>
+              <h4 className="text-indigo-400 text-[10px] font-black uppercase tracking-widest">
+                System Diagnostics
+              </h4>
+              <p className="text-slate-500 text-[9px]">Check hardware connection</p>
+            </div> */}
+
+            <button
+              onClick={handleTestPrint}
+              className="flex w-full items-center gap-2 px-4 py-2 bg-slate-950 hover:bg-indigo-600 text-slate-400 hover:text-white border border-slate-800 rounded-lg transition-all text-[10px] font-bold"
+            >
+              <Printer size={14} />
+              TEST THERMAL PRINTER
+            </button>
+          </div>
+        </div>
 
         <section>
           <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4">

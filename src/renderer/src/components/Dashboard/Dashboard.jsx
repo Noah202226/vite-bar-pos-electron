@@ -5,7 +5,7 @@ import ProductGrid from './ProductGrid'
 import TableGrid from './TableGrid'
 import ProductInventoryList from './ProductInventoryList' // <--- New Component
 import OperationsSidebar from './OperationsSidebar'
-import { Megaphone } from 'lucide-react'
+import { Megaphone, Printer } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
 import { useHistoryStore } from '../../store/useHistoryStore'
 import { useAuthStore } from '../../store/useAuthStore'

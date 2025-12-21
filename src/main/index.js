@@ -140,6 +140,50 @@ app.whenReady().then(() => {
   //   )
   // })
 
+  ipcMain.handle('print-html', async (_, html) => {
+    console.log('Received print-html request')
+
+    const printWindow = new BrowserWindow({
+      show: false, // Set to false once it works to keep it hidden
+      width: 300, // Roughly 58mm equivalent
+      height: 600,
+      webPreferences: { sandbox: false }
+    })
+
+    // 1. SET UP THE PROMISE FIRST
+    const printPromise = new Promise((resolve) => {
+      // 2. ATTACH THE LISTENER BEFORE LOADING
+      printWindow.webContents.on('did-finish-load', () => {
+        console.log('Content loaded, starting print timer...')
+
+        setTimeout(async () => {
+          const printers = await printWindow.webContents.getPrintersAsync()
+          const thermalPrinter = printers.find((p) => p.name === 'POS-58')
+
+          printWindow.webContents.print(
+            {
+              silent: true, // Change back to true for production auto-print
+              deviceName: thermalPrinter ? thermalPrinter.name : '',
+              printBackground: true,
+              margins: { marginType: 'none' },
+              pageSize: { width: 58000, height: 200000 }
+            },
+            (success, failureReason) => {
+              console.log('Print result:', success, failureReason)
+              printWindow.close()
+              resolve(success)
+            }
+          )
+        }, 500) // 1 second delay ensures CSS/Styles are applied
+      })
+    })
+
+    // 3. NOW LOAD THE URL
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+
+    return printPromise
+  })
+
   connectDB()
 
   registerIpcHandlers() // <--- CRITICAL: CALL THE FUNCTION HERE

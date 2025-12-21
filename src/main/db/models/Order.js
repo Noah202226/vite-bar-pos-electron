@@ -18,7 +18,9 @@ const OrderSchema = new mongoose.Schema(
     total: { type: Number, default: 0 },
     status: { type: String, enum: ['open', 'paid', 'void'], default: 'open' },
     isReserved: { type: Boolean, default: false },
-    openedBy: String,
+    // UPDATED FIELDS
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Reference to User model
+    openedBy: String, // String name of the waiter/cashier for the receipt
     closedAt: Date
   },
   { timestamps: true }

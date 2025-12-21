@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   History,
   User,
@@ -15,6 +15,9 @@ export default function InventoryLogTable() {
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
+  const [typeFilter, setTypeFilter] = useState('ALL')
+  const [dateRange, setDateRange] = useState({ start: '', end: '' })
+
   const { selectedProductId: filterProductId, clearFilter: onClearFilters } = useHistoryStore()
 
   const fetchLogs = useCallback(async () => {
@@ -23,12 +26,16 @@ export default function InventoryLogTable() {
       console.log('Fetching logs with filterProductId:', filterProductId)
       const allLogs = await window.api.getInventoryLogs()
 
-      // If filterProductId is provided, filter the results
+      // 1. Sort by date: Newest (Recent) first
+      // We convert the timestamp to a Date object and subtract them
+      const sortedLogs = allLogs.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+
+      // 2. Apply filtering if filterProductId exists
       if (filterProductId) {
-        const filtered = allLogs.filter((log) => log.productId === filterProductId)
+        const filtered = sortedLogs.filter((log) => log.productId === filterProductId)
         setLogs(filtered)
       } else {
-        setLogs(allLogs)
+        setLogs(sortedLogs)
       }
     } catch (error) {
       console.error('Failed to load logs:', error)
@@ -37,6 +44,23 @@ export default function InventoryLogTable() {
       setIsRefreshing(false)
     }
   }, [filterProductId])
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter((log) => {
+      // 1. Filter by Type
+      const matchesType = typeFilter === 'ALL' || log.type === typeFilter
+
+      // 2. Filter by Date Range
+      const logDate = new Date(log.updatedAt).setHours(0, 0, 0, 0)
+      const start = dateRange.start ? new Date(dateRange.start).setHours(0, 0, 0, 0) : null
+      const end = dateRange.end ? new Date(dateRange.end).setHours(0, 0, 0, 0) : null
+
+      const matchesStart = !start || logDate >= start
+      const matchesEnd = !end || logDate <= end
+
+      return matchesType && matchesStart && matchesEnd
+    })
+  }, [logs, typeFilter, dateRange])
 
   useEffect(() => {
     fetchLogs()
@@ -52,6 +76,51 @@ export default function InventoryLogTable() {
               {filterProductId ? 'Product History' : 'Global Audit Log'}
             </span>
             {isRefreshing && <RefreshCw size={12} className="text-indigo-500 animate-spin" />}
+          </div>
+
+          {/* FILTER BAR */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Type Selector */}
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-400 focus:border-indigo-500 outline-none"
+            >
+              <option value="ALL">ALL EVENTS</option>
+              <option value="SALE">SALES ONLY</option>
+              <option value="VOID_DELETE">VOIDS ONLY</option>
+              {/* <option value="RESTOCK">RESTOCK ONLY</option> */}
+            </select>
+
+            {/* Date Inputs */}
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] text-slate-400 outline-none focus:border-indigo-500"
+              />
+              <span className="text-slate-700 text-[10px] font-bold">TO</span>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] text-slate-400 outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Reset Filters */}
+            {(typeFilter !== 'ALL' || dateRange.start || dateRange.end) && (
+              <button
+                onClick={() => {
+                  setTypeFilter('ALL')
+                  setDateRange({ start: '', end: '' })
+                }}
+                className="text-[10px] font-black text-rose-500 uppercase hover:text-rose-400 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
 
           {/* Filter Badge */}
@@ -101,7 +170,7 @@ export default function InventoryLogTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900/50">
-              {logs.map((log) => (
+              {filteredLogs.map((log) => (
                 <tr key={log._id} className="hover:bg-slate-900/40 transition-colors group">
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
