@@ -164,7 +164,7 @@ function CategorySettings() {
           <FolderPlus size={18} className="text-indigo-500" />
         </div>
 
-        <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+        <div className="p-4 space-y-2 max-h-100 overflow-y-auto custom-scrollbar">
           {categories.length === 0 ? (
             <div className="py-10 text-center text-slate-600 text-[10px] font-bold uppercase tracking-widest">
               No categories found

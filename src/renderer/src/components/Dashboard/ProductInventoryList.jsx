@@ -10,30 +10,38 @@ import {
   Plus,
   Edit,
   Trash2,
-  Save
+  Save,
+  User
 } from 'lucide-react'
+import { useAuthStore } from '../../store/useAuthStore'
+import toast from 'react-hot-toast'
 
 export default function ProductInventoryList() {
   const { products, categories, fetchProducts, fetchCategories } = useCartStore()
+  const { user } = useAuthStore((state) => state)
 
   // --- Local State for UI ---
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [isInitialLoading, setIsInitialLoading] = useState(true)
 
-  // --- CRUD State ---
+  // --- Modal States ---
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Form State (empty for new, populated for edit)
-  const [formData, setFormData] = useState({
+  // Form State
+  const initialFormState = {
     _id: null,
     name: '',
     category: '',
     price: '',
-    stock: '',
-    lowStock: 5
-  })
+    currentStock: '',
+    lowStockAlert: 5,
+    createdBy: '' // Added for your TODO
+  }
+  const [formData, setFormData] = useState(initialFormState)
 
   // --- Initial Data Load ---
   useEffect(() => {
@@ -63,57 +71,73 @@ export default function ProductInventoryList() {
 
   // --- Handlers ---
 
-  const handleAddNew = () => {
-    setFormData({
-      _id: null,
-      name: '',
-      category: categories[0]?.name || '',
-      price: '',
-      stock: '',
-      lowStock: 5
-    })
+  // 1. Handle Add (Resets form and opens modal)
+  const handleAdd = () => {
+    setFormData(initialFormState)
+    // Set default category to first available if exists
+    if (categories.length > 0) {
+      setFormData((prev) => ({ ...prev, category: categories[0].name }))
+    }
     setIsModalOpen(true)
   }
 
+  // 2. Handle Edit (Populates form)
   const handleEdit = (product) => {
     setFormData({
       _id: product._id,
       name: product.name,
       category: product.category,
       price: product.price,
-      stock: product.stock,
-      lowStock: product.lowStock
+      currentStock: product.currentStock,
+      lowStockAlert: product.lowStockAlert,
+      lastModifiedBy: product.lastModifiedBy || 'Unknown'
     })
     setIsModalOpen(true)
   }
 
+  // --- Themed Delete Logic ---
+  const confirmDelete = (product) => {
+    setProductToDelete(product)
+    setIsDeleteModalOpen(true)
+  }
+
+  // 3. Handle Delete
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return
+    if (!productToDelete) return
+    const toastId = toast.loading('Deleting product...')
 
     try {
-      const result = await window.api.deleteProduct(id)
+      const result = await window.api.deleteProduct(productToDelete._id)
       if (result.success) {
-        fetchProducts() // Refresh list
+        fetchProducts()
+        toast.success('Product removed from inventory', { id: toastId })
+        setIsDeleteModalOpen(false)
       } else {
-        alert('Failed to delete: ' + result.error)
+        toast.error(result.error || 'Delete failed', { id: toastId })
       }
     } catch (err) {
-      console.error(err)
+      toast.error('A system error occurred', { id: toastId })
     }
   }
 
+  // 4. Handle Submit (Create OR Update)
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSaving(true)
 
+    const toastId = toast.loading(formData._id ? 'Updating product...' : 'Creating product...')
+
     try {
-      // Format data for DB (convert strings to numbers)
+      // TODO: Get actual logged-in user from your AuthStore
+      const currentUser = user?.username || 'Unknown'
+
       const payload = {
         name: formData.name,
         category: formData.category,
         price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        lowStock: parseInt(formData.lowStock)
+        currentStock: parseInt(formData.currentStock),
+        lowStockAlert: parseInt(formData.lowStockAlert),
+        createdBy: currentUser // Sending user info to DB
       }
 
       let result
@@ -127,12 +151,14 @@ export default function ProductInventoryList() {
 
       if (result.success) {
         setIsModalOpen(false)
-        fetchProducts() // Refresh List
+        fetchProducts()
+
+        toast.success(`Product ${formData._id ? 'updated' : 'added'} successfully`, { id: toastId })
       } else {
         alert('Operation failed: ' + (result.error || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Save error:', error)
+      toast.error('Check your connection or data format', { id: toastId })
     } finally {
       setIsSaving(false)
     }
@@ -178,20 +204,22 @@ export default function ProductInventoryList() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* REFRESH BUTTON */}
           <button
             onClick={() => fetchProducts()}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-500 hover:text-indigo-400 hover:bg-slate-900 transition-all"
+            title="Refresh List"
           >
             <RefreshCw size={14} />
           </button>
 
-          {/* Add New Button */}
+          {/* ADD PRODUCT BUTTON */}
           <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-lg shadow-indigo-600/20"
+            onClick={handleAdd}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
           >
-            <Plus size={16} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Add Product</span>
+            <Plus size={16} strokeWidth={3} />
+            <span>Add Product</span>
           </button>
         </div>
       </div>
@@ -240,7 +268,7 @@ export default function ProductInventoryList() {
                 <th className="pb-2">Category</th>
                 <th className="pb-2 text-right">Unit Price</th>
                 <th className="pb-2 text-center">In Stock</th>
-                <th className="pb-2 text-center">Status</th>
+                {/* <th className="pb-2">createdBy</th> */}
                 <th className="pb-2 text-right pr-4">Actions</th>
               </tr>
             </thead>
@@ -265,23 +293,23 @@ export default function ProductInventoryList() {
                   </td>
                   <td className="py-3 text-center">
                     <div
-                      className={`flex items-center justify-center gap-1.5 font-bold ${product.stock <= product.lowStock ? 'text-amber-500' : 'text-slate-400'}`}
+                      className={`flex items-center justify-center gap-1.5 font-bold ${product.currentStock <= product.lowStockAlert ? 'text-amber-500 animate-pulse' : 'text-slate-400'}`}
                     >
                       <Boxes size={12} />
-                      {product.stock}
+                      {product.currentStock}
                     </div>
                   </td>
-                  <td className="py-3 text-center">
-                    {product.stock <= product.lowStock ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[8px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                        <AlertCircle size={10} /> Low Stock
+
+                  {/* NEW COLUMN: Last Updated By */}
+                  {/* <td className="py-3">
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <User size={12} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                        {product.createdBy || 'System'}
                       </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[8px] font-black uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                        Stable
-                      </span>
-                    )}
-                  </td>
+                    </div>
+                  </td> */}
+
                   {/* Action Buttons */}
                   <td className="py-3 text-right rounded-r-2xl pr-4">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -335,7 +363,7 @@ export default function ProductInventoryList() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none placeholder:text-slate-700"
                     placeholder="e.g. Iced Vanilla Latte"
                   />
                 </div>
@@ -349,6 +377,7 @@ export default function ProductInventoryList() {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                   >
+                    {categories.length === 0 && <option>Loading...</option>}
                     {categories.map((c) => (
                       <option key={c._id} value={c.name}>
                         {c.name}
@@ -378,8 +407,8 @@ export default function ProductInventoryList() {
                   <input
                     required
                     type="number"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    value={formData.currentStock}
+                    onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                   />
                 </div>
@@ -391,8 +420,8 @@ export default function ProductInventoryList() {
                   <input
                     required
                     type="number"
-                    value={formData.lowStock}
-                    onChange={(e) => setFormData({ ...formData, lowStock: e.target.value })}
+                    value={formData.lowStockAlert}
+                    onChange={(e) => setFormData({ ...formData, lowStockAlert: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                   />
                 </div>
@@ -422,5 +451,3 @@ export default function ProductInventoryList() {
     </div>
   )
 }
-
-// TODO ADD user whos update or add the prouduct"

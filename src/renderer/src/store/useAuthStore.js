@@ -9,7 +9,9 @@ export const useAuthStore = create((set) => ({
   isLoggedIn: false,
   view: 'loading', // State for the main application view ('loading', 'login', 'dashboard')
 
-  // ACTIONS (Functions to modify the state)
+  // You need this action to manually set the user from the "checkSession" result
+  setUser: (userData) => set({ user: userData, isAuthenticated: true }),
+
   setUserAndLogin: (userData) =>
     set({
       user: userData,
