@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Receipt, Trash2, Plus, Minus } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
+import TenderModal from './TenderModal'
 
 export default function OrderSidebar() {
   const { activeOrder, isLoading, checkout, voidItem, addItem } = useOrderStore()
+
+  const [isTenderOpen, setIsTenderOpen] = useState(false)
 
   return (
     <aside className="w-80 lg:w-96 bg-slate-900 border-r border-slate-800 flex flex-col shadow-inner">
@@ -70,12 +73,12 @@ export default function OrderSidebar() {
                   </span>
 
                   {/* OPTIONAL ADD BUTTON (Matches the flow) */}
-                  <button
+                  {/* <button
                     onClick={() => addItem(item)}
                     className="p-1.5 hover:bg-indigo-500/20 text-indigo-500 rounded-md transition-colors"
                   >
                     <Plus size={14} strokeWidth={3} />
-                  </button>
+                  </button> */}
                 </div>
 
                 <span
@@ -106,7 +109,8 @@ export default function OrderSidebar() {
         </div>
 
         <button
-          onClick={() => checkout()}
+          // onClick={() => checkout()}
+          onClick={() => setIsTenderOpen(true)}
           disabled={
             !activeOrder || !activeOrder.items || activeOrder.items.length === 0 || isLoading
           }
@@ -120,6 +124,16 @@ export default function OrderSidebar() {
         >
           PLACE & PRINT ORDER
         </button>
+
+        <TenderModal
+          isOpen={isTenderOpen}
+          total={activeOrder?.total || 0}
+          onClose={() => setIsTenderOpen(false)}
+          onConfirm={(tendered, change) => {
+            checkout(tendered, change)
+            setIsTenderOpen(false)
+          }}
+        />
       </div>
     </aside>
   )

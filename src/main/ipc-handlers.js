@@ -467,7 +467,7 @@ export function registerIpcHandlers() {
             <span>TOTAL:</span>
             <span>₱${order.total.toFixed(2)}</span>
           </div>
-          <p style="text-align: center; margin-top: 20px;">Thank you! Come again.</p>
+          <p style="text-align: center; margin-top: 1px;">Thank you! Come again.</p>
         </div>
       </body>
     </html>

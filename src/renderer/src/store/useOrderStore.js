@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useAuthStore } from './useAuthStore'
+import { usePrintStore } from './usePrintStore'
 
 /**
  * useOrderStore: THE DINING ROOM MANAGER
@@ -170,29 +171,73 @@ export const useOrderStore = create((set, get) => ({
 
   // --- ACTION: CHECKOUT / PAY ---
   // Finalizes the bill, marks it as "Paid", prints the receipt, and clears the table
-  checkout: async () => {
+  // checkout: async () => {
+  //   const { activeOrder, fetchFloorStatus } = get()
+  //   const { user } = useAuthStore.getState()
+
+  //   if (!activeOrder) return
+
+  //   // Helper to safely get a string ID
+  //   const cleanId = (id) => {
+  //     if (!id) return null
+  //     return typeof id === 'string' ? id : id.toString()
+  //   }
+
+  //   try {
+  //     const finalizedOrder = await window.api.checkoutOrder({
+  //       orderId: cleanId(activeOrder._id),
+  //       transactBy: user?.username || 'Admin',
+  //       userId: cleanId(user?._id) // Clean string conversion here
+  //     })
+
+  //     if (finalizedOrder.error) throw new Error(finalizedOrder.error)
+
+  //     await window.api.printOrderReceipt(finalizedOrder)
+  //     await window.api.printReceipt(finalizedOrder)
+  //     set({ activeOrder: null })
+  //     await fetchFloorStatus()
+  //   } catch (error) {
+  //     console.error('Checkout Error:', error)
+  //   }
+  // },
+
+  checkout: async (tenderedAmount, changeAmount) => {
+    // Accept the two arguments
     const { activeOrder, fetchFloorStatus } = get()
     const { user } = useAuthStore.getState()
+    const printReceipt = usePrintStore.getState().printReceipt
 
     if (!activeOrder) return
 
-    // Helper to safely get a string ID
     const cleanId = (id) => {
       if (!id) return null
       return typeof id === 'string' ? id : id.toString()
     }
 
     try {
+      // 1. Finalize order in Database
       const finalizedOrder = await window.api.checkoutOrder({
         orderId: cleanId(activeOrder._id),
         transactBy: user?.username || 'Admin',
-        userId: cleanId(user?._id) // Clean string conversion here
+        userId: cleanId(user?._id),
+        tendered: tenderedAmount, // Use the argument name
+        change: changeAmount // Use the argument name
       })
 
       if (finalizedOrder.error) throw new Error(finalizedOrder.error)
 
-      await window.api.printOrderReceipt(finalizedOrder)
-      await window.api.printReceipt(finalizedOrder)
+      // 2. TRIGGER PRINTING
+      await printReceipt({
+        items: finalizedOrder.items,
+        total: finalizedOrder.total,
+        tableNumber: finalizedOrder.tableNumber,
+        orderId: finalizedOrder.orderNumber || finalizedOrder._id,
+        paymentType: 'Cash',
+        tendered: tenderedAmount, // Pass these to the printer
+        change: changeAmount
+      })
+
+      // 3. Cleanup UI
       set({ activeOrder: null })
       await fetchFloorStatus()
     } catch (error) {

@@ -12,6 +12,7 @@ import {
   Printer
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { usePrintStore } from '../../store/usePrintStore'
 
 export default function OperationsSidebar() {
   const handleOpenSettings = () => {
@@ -25,6 +26,8 @@ export default function OperationsSidebar() {
       toast.error('Err:', e)
     }
   }
+
+  const { printTest, isPrinting } = usePrintStore()
 
   const handleTestPrint = async () => {
     console.log('Initiating test print to POS-58 thermal printer')
@@ -107,11 +110,13 @@ export default function OperationsSidebar() {
             </div> */}
 
             <button
-              onClick={handleTestPrint}
-              className="flex w-full items-center gap-2 px-4 py-2 bg-slate-950 hover:bg-indigo-600 text-slate-400 hover:text-white border border-slate-800 rounded-lg transition-all text-[10px] font-bold"
+              disabled={isPrinting}
+              onClick={printTest}
+              // className="flex w-full items-center gap-2 px-4 py-2 bg-slate-950 hover:bg-indigo-600 text-slate-400 hover:text-white border border-slate-800 rounded-lg transition-all text-[10px] font-bold"
+              className="bg-blue-600 p-2 rounded w-full flex items-center gap-2 px-4 py-2 hover:bg-blue-700 text-white font-bold text-[14px] justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer"
             >
               <Printer size={14} />
-              TEST THERMAL PRINTER
+              {isPrinting ? 'Printing...' : 'Run Thermal Test'}
             </button>
           </div>
         </div>
