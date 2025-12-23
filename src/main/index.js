@@ -154,8 +154,6 @@ app.whenReady().then(() => {
     const printPromise = new Promise((resolve) => {
       // 2. ATTACH THE LISTENER BEFORE LOADING
       printWindow.webContents.on('did-finish-load', () => {
-        console.log('Content loaded, starting print timer...')
-
         setTimeout(async () => {
           const printers = await printWindow.webContents.getPrintersAsync()
           const thermalPrinter = printers.find((p) => p.name === 'POS-58')

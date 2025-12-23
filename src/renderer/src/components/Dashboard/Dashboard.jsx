@@ -33,7 +33,7 @@ export default function Dashboard({ user, onLogout }) {
             {/* 1. TOP SECTION: Tables or Active Order Grid */}
             <div
               className={
-                !activeOrder ? 'h-[60%] border-b border-slate-900 overflow-hidden' : 'flex-1'
+                !activeOrder ? 'h-[100%] border-b border-slate-900 overflow-hidden' : 'flex-1'
               }
             >
               {!activeOrder ? <TableGrid /> : <ProductGrid />}
@@ -41,7 +41,7 @@ export default function Dashboard({ user, onLogout }) {
 
             {/* 2. BOTTOM SECTION: Product Inventory Listing (Only shows when no active order) */}
             {!activeOrder && (
-              <div className="h-[40%] flex flex-col bg-slate-950/50">
+              <div className="h-[35%] flex flex-col bg-slate-950/50">
                 <ProductInventoryList />
               </div>
             )}
