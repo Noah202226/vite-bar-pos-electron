@@ -10,6 +10,7 @@ import { useOrderStore } from '../../store/useOrderStore'
 import { useHistoryStore } from '../../store/useHistoryStore'
 import { useAuthStore } from '../../store/useAuthStore'
 import HistoryDrawer from './HistoryDrawer'
+import PayrollModal from './Payroll/PayrollModal'
 
 export default function Dashboard({ user, onLogout }) {
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -67,6 +68,8 @@ export default function Dashboard({ user, onLogout }) {
         </main>
 
         <OperationsSidebar />
+
+        <PayrollModal />
       </div>
     </div>
   )

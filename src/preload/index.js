@@ -39,7 +39,22 @@ const api = {
   // These only tell Main process to open a new window
   openAddProductWindow: () => ipcRenderer.send('window:open-add-product'),
   openSettingsWindow: () => ipcRenderer.send('window:open-settings'),
-  openSalesReport: () => ipcRenderer.send('window:open-sales-report')
+  openSalesReport: () => ipcRenderer.send('window:open-sales-report'),
+
+  // PAYROLL WINDOW IPC TO BE ADDED HERE
+  openPayrollWindow: () => ipcRenderer.send('window:open-payroll'),
+
+  // --- ADD THESE EMPLOYEE HANDLERS ---
+  // Personnel Handlers
+  getAllEmployees: () => ipcRenderer.invoke('employee:get-all'),
+  addEmployee: (data) => ipcRenderer.invoke('employee:add', data),
+
+  // DTR / Shift Handlers
+  getEmployeeDTR: (params) => ipcRenderer.invoke('payroll:get-employee-dtr', params),
+  getActiveShifts: () => ipcRenderer.invoke('attendance:get-active'),
+  clockIn: (payload) => ipcRenderer.invoke('attendance:clock-in', payload),
+  clockOut: (payload) => ipcRenderer.invoke('attendance:clock-out', payload),
+  getAttendanceStatus: (userId) => ipcRenderer.invoke('attendance:get-status', userId)
 }
 
 if (process.contextIsolated) {

@@ -5,6 +5,8 @@ import icon from '../../resources/icon.png?asset'
 import { connectDB } from './db/connection'
 
 import { registerIpcHandlers } from './ipc-handlers'
+import { registerPayrollHandlers } from './payroll-controller'
+import { registerEmployeeHandlers } from './employeeHandlers'
 
 export function createFeatureWindow(parent, route, width = 900, height = 700) {
   const featureWindow = new BrowserWindow({
@@ -153,6 +155,10 @@ app.whenReady().then(() => {
   connectDB()
 
   registerIpcHandlers() // <--- CRITICAL: CALL THE FUNCTION HERE
+  registerEmployeeHandlers()
+  registerPayrollHandlers()
+
+  // 2. CREATE THE MAIN WINDOW
 
   global.mainWindow = createWindow()
 

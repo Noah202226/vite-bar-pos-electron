@@ -7,6 +7,7 @@ import { ProductMonitoring } from './db/models/ProductMonitoring'
 import mongoose from 'mongoose'
 
 export function registerIpcHandlers() {
+  console.log('Registering IPC Handlers...')
   // Handler to fetch all products
   ipcMain.handle('db:get-products', async () => {
     try {

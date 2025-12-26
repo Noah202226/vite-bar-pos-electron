@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Trash2,
   Tag,
@@ -9,10 +9,13 @@ import {
   History,
   Settings,
   BarChart3,
-  Printer
+  Printer,
+  Clock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { usePrintStore } from '../../store/usePrintStore'
+import { usePayrollStore } from '../../store/usePayrollStore'
+import AttendanceModal from './Payroll/AttendanceModal'
 
 export default function OperationsSidebar() {
   const handleOpenSettings = () => {
@@ -26,6 +29,11 @@ export default function OperationsSidebar() {
       toast.error('Err:', e)
     }
   }
+
+  const [isAttendanceOpen, setIsAttendanceOpen] = useState(false)
+
+  // Add this handler
+  const setPayrollOpen = usePayrollStore((s) => s.setPayrollOpen)
 
   const { printTest, isPrinting } = usePrintStore()
 
@@ -93,6 +101,10 @@ export default function OperationsSidebar() {
               color="hover:border-indigo-600 text-indigo-400"
             />
             <WideOpButton
+              onClick={() => {
+                console.log('Opening Payroll Management...')
+                setPayrollOpen(true)
+              }}
               icon={<Users />}
               label="Payroll"
               color="hover:border-emerald-500 text-emerald-400"
@@ -122,20 +134,20 @@ export default function OperationsSidebar() {
         </div>
 
         <section>
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4">
-            Staff & Attendance
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <button className="flex flex-col items-center justify-center p-4 bg-slate-800 rounded-2xl border border-slate-700 hover:border-emerald-500 transition-all gap-2 group">
-              <UserCheck className="text-slate-500 group-hover:text-emerald-500" />
-              <span className="text-[10px] font-black uppercase">Clock In</span>
+          <section>
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4">
+              Staff & Attendance
+            </p>
+            <button
+              onClick={() => setIsAttendanceOpen(true)}
+              className="w-full flex items-center justify-center gap-3 p-6 bg-indigo-600 rounded-3xl text-white font-black uppercase text-[10px] tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20"
+            >
+              <Clock size={18} /> Open Attendance Terminal
             </button>
-            <button className="flex flex-col items-center justify-center p-4 bg-slate-800 rounded-2xl border border-slate-700 hover:border-red-500 transition-all gap-2 group">
-              <UserX className="text-slate-500 group-hover:text-red-500" />
-              <span className="text-[10px] font-black uppercase">Clock Out</span>
-            </button>
-          </div>
+          </section>
         </section>
+
+        <AttendanceModal isOpen={isAttendanceOpen} onClose={() => setIsAttendanceOpen(false)} />
       </div>
 
       <div className="p-6 border-t border-slate-800">
