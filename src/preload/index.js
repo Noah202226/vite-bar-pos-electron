@@ -17,6 +17,7 @@ const api = {
   login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
   signup: (userData) => ipcRenderer.invoke('auth:signup', userData),
   logout: () => ipcRenderer.invoke('auth:logout'),
+  getUserSessionSales: (data) => ipcRenderer.invoke('get-user-session-sales', data),
 
   // --- Orders ---
   getTableOrder: (num) => ipcRenderer.invoke('db:get-table-order', num),

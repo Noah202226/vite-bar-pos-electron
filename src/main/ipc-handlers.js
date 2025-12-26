@@ -182,6 +182,7 @@ export function registerIpcHandlers() {
 
         // 2. Set THIS user to active
         user.isActive = true
+        user.lastLogin = new Date() // Record the start of this session
         await user.save()
         // ------------------------------
 
@@ -439,6 +440,26 @@ export function registerIpcHandlers() {
       return { error: error.message }
     }
   })
+  // --- UPDATE SESSION SALES TRACKING ---
+  ipcMain.handle('get-user-session-sales', async (event, { username, loginTime }) => {
+    try {
+      // Find paid orders by this user since their login time
+      const sessionOrders = await Order.find({
+        openedBy: username, // Match the 'transactBy' or 'openedBy' used in checkout
+        status: 'paid', // Case-sensitive: make sure this matches your checkout status
+        closedAt: { $gte: new Date(loginTime) }
+      }).lean()
+
+      const total = sessionOrders.reduce((sum, order) => sum + (order.total || 0), 0)
+      const count = sessionOrders.length
+
+      return { total, count }
+    } catch (error) {
+      console.error('Session sales error:', error)
+      return { total: 0, count: 0 }
+    }
+  })
+
   ipcMain.handle('print-receipt', async (event, order) => {
     const printWindow = new BrowserWindow({
       show: false, // Keep it hidden

@@ -7,11 +7,36 @@ import { usePrintStore } from './usePrintStore'
  * Handles: Dine-in tables, live syncing with the database, and Sales Reports.
  */
 export const useOrderStore = create((set, get) => ({
+  sessionTotal: 0,
+  sessionCount: 0,
+
   // --- STATE: DINE-IN DATA ---
   activeOrder: null, // The specific order/bill for the table currently being viewed
   isLoading: false, // UI helper for when loading a specific table's data
   floorStatus: [], // Array representing all tables (occupied, empty, or reserved)
   salesData: [], // Data storage for the Sales Report charts/tables
+
+  // Fetch sales specifically for THIS user's current session
+  fetchUserSessionSales: async () => {
+    const { user } = useAuthStore.getState()
+
+    // We use the lastLogin timestamp stored when the user signed in
+    if (!user || !user.lastLogin) return
+
+    try {
+      const data = await window.api.getUserSessionSales({
+        username: user.username,
+        loginTime: user.lastLogin
+      })
+
+      set({
+        sessionTotal: data.total,
+        sessionCount: data.count
+      })
+    } catch (error) {
+      console.error('Session fetch error:', error)
+    }
+  },
 
   // --- ACTION: FETCH SALES REPORT ---
   fetchSalesReport: async (startDate, endDate) => {
@@ -247,6 +272,8 @@ export const useOrderStore = create((set, get) => ({
 
       set({ activeOrder: null })
       await fetchFloorStatus()
+      // Refresh session stats after every successful payment
+      await get().fetchUserSessionSales()
     } catch (error) {
       console.error('Checkout Error:', error)
     }
