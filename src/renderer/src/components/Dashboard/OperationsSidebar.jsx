@@ -70,7 +70,7 @@ export default function OperationsSidebar() {
             Transaction Control
           </p>
           <div className="space-y-3">
-            <WideOpButton
+            {/* <WideOpButton
               icon={<Trash2 />}
               label="Void Entire Order"
               color="hover:border-red-500 text-red-400 m-20"
@@ -79,7 +79,7 @@ export default function OperationsSidebar() {
               icon={<Tag />}
               label="Apply Discount"
               color="hover:border-amber-500 text-amber-400"
-            />
+            /> */}
             {/* <WideOpButton
               icon={<Calculator />}
               label="Split Bill / Items"
@@ -87,15 +87,15 @@ export default function OperationsSidebar() {
             />
             */}
             <WideOpButton
-              icon={<Users />}
-              label="Payroll"
-              color="hover:border-emerald-500 text-emerald-400"
-            />
-            <WideOpButton
               onClick={handleOpenSalesReport}
               icon={<BarChart3 />}
               label="Daily Sales Report"
               color="hover:border-indigo-600 text-indigo-400"
+            />
+            <WideOpButton
+              icon={<Users />}
+              label="Payroll"
+              color="hover:border-emerald-500 text-emerald-400"
             />
           </div>
         </section>

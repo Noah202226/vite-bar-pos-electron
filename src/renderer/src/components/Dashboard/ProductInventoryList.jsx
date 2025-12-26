@@ -352,7 +352,7 @@ export default function ProductInventoryList() {
                   </td>
                   <td className="py-3 text-center">
                     <div
-                      className={`flex items-center justify-center gap-1.5 font-bold ${product.currentStock <= product.lowStockAlert ? 'text-amber-500 animate-pulse' : 'text-slate-400'}`}
+                      className={`flex items-center justify-center gap-1.5 font-bold ${product.currentStock <= product.lowStockAlert ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}
                     >
                       <Boxes size={12} />
                       {product.currentStock}
@@ -395,7 +395,7 @@ export default function ProductInventoryList() {
 
       {/* --- CRUD MODAL --- */}
       {isModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div className="absolute inset-0 z-50 top-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/50">
               <h3 className="text-sm font-black uppercase tracking-widest text-white">
@@ -538,10 +538,10 @@ export default function ProductInventoryList() {
 
       {/* --- TAKE OUT ORDER MODAL --- */}
       {isOrderModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div className="absolute inset-0 z-9999 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
             {/* Header */}
-            <div className="p-6 text-center border-b border-slate-800 bg-slate-800/30">
+            <div className="p-2 text-center border-b border-slate-800 bg-slate-800/30">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-1">
                 New Takeout Order
               </p>
@@ -551,9 +551,9 @@ export default function ProductInventoryList() {
               </p>
             </div>
 
-            <div className="p-8 flex flex-col items-center gap-6">
+            <div className="p-4 flex flex-col items-center gap-4">
               {/* Quantity Selector */}
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => setOrderQty(Math.max(1, orderQty - 1))}
                   className="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700 active:scale-90 transition-all border border-slate-700"

@@ -111,7 +111,7 @@ export default function SignupPage({ onReturnToLogin, onSignupSuccess }) {
                   <option value="Bartender">Bartender</option>
 
                   {/* <option value="Manager">Manager</option> */}
-                  <option value="Admin">Admin</option>
+                  {/* <option value="Admin">Admin</option> */}
                 </select>
               </div>
             </div>

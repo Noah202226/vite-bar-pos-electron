@@ -33,7 +33,7 @@ export default function Dashboard({ user, onLogout }) {
             {/* 1. TOP SECTION: Tables or Active Order Grid */}
             <div
               className={
-                !activeOrder ? 'h-[100%] border-b border-slate-900 overflow-hidden' : 'flex-1'
+                !activeOrder ? 'h-full border-b border-slate-900 overflow-hidden' : 'flex-1'
               }
             >
               {!activeOrder ? <TableGrid /> : <ProductGrid />}

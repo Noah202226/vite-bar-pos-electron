@@ -3,6 +3,7 @@ import LoginPage from './components/LoginPage'
 import SignupPage from './components/SignupPage'
 import Dashboard from './components/Dashboard/Dashboard'
 import { useAuthStore } from './store/useAuthStore' // <--- NEW IMPORT
+import toast from 'react-hot-toast'
 
 function App() {
   // 1. Get state and actions from the Zustand store
@@ -17,6 +18,9 @@ function App() {
   const handleSignupSuccess = (userData) => {
     // This calls the action we defined in the store
     setUserAndLogin(userData)
+    logout()
+    setInitialView('login')
+    toast.success('Signup successful! Please log in.')
   }
 
   const handleLogout = async () => {
