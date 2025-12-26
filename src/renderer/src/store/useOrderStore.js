@@ -14,7 +14,6 @@ export const useOrderStore = create((set, get) => ({
   salesData: [], // Data storage for the Sales Report charts/tables
 
   // --- ACTION: FETCH SALES REPORT ---
-  // Retrieves historical sales data from the DB for a specific date range
   fetchSalesReport: async (startDate, endDate) => {
     try {
       const data = await window.api.getSalesReport(startDate, endDate)
@@ -25,13 +24,11 @@ export const useOrderStore = create((set, get) => ({
   },
 
   // --- ACTION: LOAD TABLE ORDER ---
-  // When you click a Table, this finds its "Open" bill in the database
   loadTableOrder: async (tableNumber) => {
     set({ isLoading: true })
     try {
       const order = await window.api.getTableOrder(tableNumber)
       if (!order) {
-        // If no bill exists, create a fresh "temporary" object for UI
         set({ activeOrder: { tableNumber, items: [], total: 0, subtotal: 0 }, isLoading: false })
       } else {
         set({ activeOrder: order, isLoading: false })
@@ -42,7 +39,6 @@ export const useOrderStore = create((set, get) => ({
   },
 
   // --- ACTION: REFRESH FLOOR ---
-  // Updates the colors of the tables (Red = Occupied, Gray = Empty)
   fetchFloorStatus: async () => {
     try {
       const orders = await window.api.getFloorStatus('db:get-floor-status')
@@ -53,18 +49,15 @@ export const useOrderStore = create((set, get) => ({
   },
 
   // --- ACTION: TOGGLE RESERVATION ---
-  // Marks a table as "Reserved" in the database
   toggleReservation: async (tableNumber) => {
     await window.api.toggleReservation({ tableNumber })
     await get().fetchFloorStatus()
   },
 
-  // --- ACTION: ADD ITEM TO TABLE ---
-  // CRITICAL: This adds an item AND immediately saves it to the Database.
-  // This ensures that if the app closes, the table's bill is safe.
+  // --- ACTION: ADD ITEM (Active Table Only) ---
+  // Use this when the user is inside the Order View
   addItem: async (product) => {
     const { activeOrder } = get()
-
     const { user } = useAuthStore.getState()
 
     if (!activeOrder) return
@@ -83,27 +76,25 @@ export const useOrderStore = create((set, get) => ({
         name: product.name,
         price: product.price,
         quantity: 1,
-        status: 'pending' // Kitchen hasn't cooked this yet
+        status: 'pending'
       })
     }
 
     const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-    // Update the screen immediately
     set({
       activeOrder: { ...activeOrder, items: updatedItems, total: newTotal, subtotal: newTotal }
     })
 
-    // Sync to Database immediately
     try {
       await window.api.updateOrderItems({
         orderId: activeOrder._id,
         items: updatedItems,
         total: newTotal,
-        currentUser: user?.username, // Pass for Monitoring
+        currentUser: user?.username,
         inventoryUpdate: {
           productId: product._id,
-          adjustment: -1, // SALE
+          adjustment: -1,
           tableNumber: activeOrder.tableNumber
         }
       })
@@ -113,17 +104,76 @@ export const useOrderStore = create((set, get) => ({
     }
   },
 
+  // --- NEW ACTION: ADD TO SPECIFIC ORDER (For Takeout/Remote) ---
+  // Use this when adding items from the Inventory List to a specific table (e.g., 'TAKEOUT')
+  addToOrder: async (tableIdentifier, productDetails) => {
+    const { user } = useAuthStore.getState()
+    const { activeOrder, fetchFloorStatus } = get()
+
+    try {
+      let targetOrder = await window.api.getTableOrder(tableIdentifier)
+      if (!targetOrder) {
+        targetOrder = { tableNumber: tableIdentifier, items: [], total: 0 }
+      }
+
+      const pId = productDetails.id || productDetails._id
+      const qtyToAdd = productDetails.quantity || 1
+      let updatedItems = [...(targetOrder.items || [])]
+
+      const existingItemIndex = updatedItems.findIndex((i) => i.productId === pId)
+      if (existingItemIndex > -1) {
+        updatedItems[existingItemIndex].quantity += qtyToAdd
+      } else {
+        updatedItems.push({
+          productId: pId,
+          name: productDetails.name,
+          price: productDetails.price,
+          quantity: qtyToAdd,
+          status: 'pending'
+        })
+      }
+
+      const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+      // ONE SINGLE CALL to the API that handles both the Order and the Inventory
+      await window.api.updateOrderItems({
+        orderId: targetOrder._id,
+        tableNumber: tableIdentifier,
+        items: updatedItems,
+        total: newTotal,
+        currentUser: user?.username || 'Staff',
+        inventoryUpdate: {
+          productId: pId,
+          adjustment: -qtyToAdd,
+          tableNumber: tableIdentifier,
+          type: 'SOLD', // This triggers the "Sold" log in your monitoring
+          reason: 'Inventory Quick Add'
+        }
+      })
+
+      if (activeOrder?.tableNumber === tableIdentifier) {
+        set({
+          activeOrder: { ...activeOrder, items: updatedItems, total: newTotal, subtotal: newTotal }
+        })
+      }
+
+      await fetchFloorStatus()
+    } catch (error) {
+      console.error('Failed to add to order:', error)
+      throw error // Throw so the component toast catches it
+    }
+  },
+
+  // --- ACTION: VOID ITEM ---
   voidItem: async (productId) => {
     const { activeOrder, fetchFloorStatus } = get()
     const { user } = useAuthStore.getState()
 
     if (!activeOrder) return
 
-    // 1. Find the item
     const itemToVoid = activeOrder.items.find((item) => item.productId === productId)
     if (!itemToVoid) return
 
-    // 2. Calculate updated items list
     let updatedItems = activeOrder.items
       .map((item) => {
         if (item.productId === productId) {
@@ -131,16 +181,14 @@ export const useOrderStore = create((set, get) => ({
         }
         return item
       })
-      .filter((item) => item.quantity > 0) // Remove from array if 0
+      .filter((item) => item.quantity > 0)
 
     const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-    // 3. Update local state for instant UI feedback
     set({
       activeOrder: { ...activeOrder, items: updatedItems, total: newTotal, subtotal: newTotal }
     })
 
-    // 4. Sync to DB, Add Stock Back, and Log to Monitoring
     try {
       await window.api.updateOrderItems({
         orderId: activeOrder._id,
@@ -149,60 +197,22 @@ export const useOrderStore = create((set, get) => ({
         currentUser: user?.username || 'Unknown',
         inventoryUpdate: {
           productId: productId,
-          adjustment: 1, // RETURNS 1 to currentStock
+          adjustment: 1, // Return stock
           tableNumber: activeOrder.tableNumber,
           type: 'VOID_DELETE'
         }
       })
-
-      // Refresh floor to ensure table status is accurate
       await fetchFloorStatus()
-
-      // IMPORTANT: Refresh Product Inventory UI if it's open
-      // if (useCartStore.getState().fetchProducts) await useCartStore.getState().fetchProducts()
     } catch (error) {
       console.error('Void failed:', error)
     }
   },
 
   // --- ACTION: CLEAR SELECTION ---
-  // Simply deselects the current table in the UI
   clearActiveOrder: () => set({ activeOrder: null }),
 
   // --- ACTION: CHECKOUT / PAY ---
-  // Finalizes the bill, marks it as "Paid", prints the receipt, and clears the table
-  // checkout: async () => {
-  //   const { activeOrder, fetchFloorStatus } = get()
-  //   const { user } = useAuthStore.getState()
-
-  //   if (!activeOrder) return
-
-  //   // Helper to safely get a string ID
-  //   const cleanId = (id) => {
-  //     if (!id) return null
-  //     return typeof id === 'string' ? id : id.toString()
-  //   }
-
-  //   try {
-  //     const finalizedOrder = await window.api.checkoutOrder({
-  //       orderId: cleanId(activeOrder._id),
-  //       transactBy: user?.username || 'Admin',
-  //       userId: cleanId(user?._id) // Clean string conversion here
-  //     })
-
-  //     if (finalizedOrder.error) throw new Error(finalizedOrder.error)
-
-  //     await window.api.printOrderReceipt(finalizedOrder)
-  //     await window.api.printReceipt(finalizedOrder)
-  //     set({ activeOrder: null })
-  //     await fetchFloorStatus()
-  //   } catch (error) {
-  //     console.error('Checkout Error:', error)
-  //   }
-  // },
-
   checkout: async (tenderedAmount, changeAmount) => {
-    // Accept the two arguments
     const { activeOrder, fetchFloorStatus } = get()
     const { user } = useAuthStore.getState()
     const printReceipt = usePrintStore.getState().printReceipt
@@ -215,29 +225,26 @@ export const useOrderStore = create((set, get) => ({
     }
 
     try {
-      // 1. Finalize order in Database
       const finalizedOrder = await window.api.checkoutOrder({
         orderId: cleanId(activeOrder._id),
         transactBy: user?.username || 'Admin',
         userId: cleanId(user?._id),
-        tendered: tenderedAmount, // Use the argument name
-        change: changeAmount // Use the argument name
+        tendered: tenderedAmount,
+        change: changeAmount
       })
 
       if (finalizedOrder.error) throw new Error(finalizedOrder.error)
 
-      // 2. TRIGGER PRINTING
       await printReceipt({
         items: finalizedOrder.items,
         total: finalizedOrder.total,
         tableNumber: finalizedOrder.tableNumber,
         orderId: finalizedOrder.orderNumber || finalizedOrder._id,
         paymentType: 'Cash',
-        tendered: tenderedAmount, // Pass these to the printer
+        tendered: tenderedAmount,
         change: changeAmount
       })
 
-      // 3. Cleanup UI
       set({ activeOrder: null })
       await fetchFloorStatus()
     } catch (error) {

@@ -5,38 +5,6 @@ import icon from '../../resources/icon.png?asset'
 import { connectDB } from './db/connection'
 
 import { registerIpcHandlers } from './ipc-handlers'
-import { PosPrinter } from 'electron-pos-printer'
-
-// --- NEW: Function to create the Settings window ---
-// export function createSettingsWindow() {
-//   const settingsWindow = new BrowserWindow({
-//     width: 800,
-//     height: 600,
-//     show: false,
-//     title: 'Application Settings and Admin Panel',
-//     parent: global.mainWindow,
-//     modal: true,
-//     webPreferences: {
-//       preload: join(__dirname, '../preload/index.js'),
-//       sandbox: false
-//     }
-//   })
-
-//   // Load the same renderer entry point, but with a new hash route
-//   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-//     settingsWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/#/settings')
-//   } else {
-//     settingsWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/settings' })
-//   }
-
-//   settingsWindow.on('ready-to-show', () => {
-//     settingsWindow.show()
-//     // Maaari mo ring buksan ang DevTools para sa debugging:
-//     // settingsWindow.webContents.openDevTools()
-//   })
-
-//   return settingsWindow
-// }
 
 export function createFeatureWindow(parent, route, width = 900, height = 700) {
   const featureWindow = new BrowserWindow({

@@ -46,6 +46,7 @@ export default function InventoryLogTable() {
   }, [filterProductId])
 
   const filteredLogs = useMemo(() => {
+    console.log('Applying filters:', { typeFilter, dateRange })
     return logs.filter((log) => {
       // 1. Filter by Type
       const matchesType = typeFilter === 'ALL' || log.type === typeFilter
@@ -64,6 +65,7 @@ export default function InventoryLogTable() {
 
   useEffect(() => {
     fetchLogs()
+    console.log(filteredLogs, 'Filtered Logs after fetch')
   }, [fetchLogs])
 
   return (

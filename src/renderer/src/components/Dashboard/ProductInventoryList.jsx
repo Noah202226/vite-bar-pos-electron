@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useCartStore } from '../../store/useCartStore'
+import { useOrderStore } from '../../store/useOrderStore' // <--- 1. IMPORT ADDED
 import {
   Boxes,
-  AlertCircle,
   Loader2,
   RefreshCw,
   Search,
@@ -20,14 +20,15 @@ import { useHistoryStore } from '../../store/useHistoryStore'
 
 export default function ProductInventoryList() {
   const { products, categories, fetchProducts, fetchCategories } = useCartStore()
+  const { addToOrder } = useOrderStore() // <--- 2. GET ORDER FUNCTION
   const { user } = useAuthStore((state) => state)
-
   const { openProductHistory } = useHistoryStore()
 
   // --- New Modal States ---
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
   const [selectedOrderProduct, setSelectedOrderProduct] = useState(null)
   const [orderQty, setOrderQty] = useState(1)
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false) // <--- Loading state for order
 
   // --- Local State for UI ---
   const [selectedCategory, setSelectedCategory] = useState('All')
@@ -48,7 +49,7 @@ export default function ProductInventoryList() {
     price: '',
     currentStock: '',
     lowStockAlert: 5,
-    createdBy: '' // Added for your TODO
+    createdBy: ''
   }
   const [formData, setFormData] = useState(initialFormState)
 
@@ -80,17 +81,14 @@ export default function ProductInventoryList() {
 
   // --- Handlers ---
 
-  // 1. Handle Add (Resets form and opens modal)
   const handleAdd = () => {
     setFormData(initialFormState)
-    // Set default category to first available if exists
     if (categories.length > 0) {
       setFormData((prev) => ({ ...prev, category: categories[0].name }))
     }
     setIsModalOpen(true)
   }
 
-  // 2. Handle Edit (Populates form)
   const handleEdit = (product) => {
     setFormData({
       _id: product._id,
@@ -104,24 +102,51 @@ export default function ProductInventoryList() {
     setIsModalOpen(true)
   }
 
-  // --- Themed Delete Logic ---
   const confirmDelete = (product) => {
     setProductToDelete(product)
     setIsDeleteModalOpen(true)
   }
 
-  // Open Order Modal
   const handleOpenOrder = (product) => {
     if (product.currentStock <= 0) {
       toast.error('Product is out of stock!')
       return
     }
     setSelectedOrderProduct(product)
-    setOrderQty(1) // Reset to 1
+    setOrderQty(1)
     setIsOrderModalOpen(true)
   }
 
-  // 3. Handle Delete
+  // --- UPDATED: Handle Confirm Order ---
+  const handleConfirmOrder = async () => {
+    if (!selectedOrderProduct) return
+    setIsProcessingOrder(true)
+    const toastId = toast.loading('Processing order...')
+
+    try {
+      // ONLY call the store action.
+      // The store will handle the DB update, the logging, and the stock.
+      await addToOrder('TAKEOUT', {
+        id: selectedOrderProduct._id,
+        name: selectedOrderProduct.name,
+        price: selectedOrderProduct.price,
+        quantity: orderQty
+      })
+
+      toast.success(`Added ${orderQty}x ${selectedOrderProduct.name} to Takeout`, { id: toastId })
+
+      // Refresh the list to show new stock (since the store updated it in the DB)
+      if (fetchProducts) fetchProducts()
+
+      setIsOrderModalOpen(false)
+    } catch (error) {
+      console.error(error)
+      toast.error(`Order processing failed`, { id: toastId })
+    } finally {
+      setIsProcessingOrder(false)
+    }
+  }
+
   const handleDelete = async (id) => {
     if (!productToDelete) return
     const toastId = toast.loading('Deleting product...')
@@ -148,7 +173,6 @@ export default function ProductInventoryList() {
     }
   }
 
-  // 4. Handle Submit (Create OR Update)
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSaving(true)
@@ -156,7 +180,6 @@ export default function ProductInventoryList() {
     const toastId = toast.loading(formData._id ? 'Updating product...' : 'Creating product...')
 
     try {
-      // TODO: Get actual logged-in user from your AuthStore
       const currentUser = user?.username || 'Unknown'
 
       const payload = {
@@ -165,16 +188,12 @@ export default function ProductInventoryList() {
         price: parseFloat(formData.price),
         currentStock: parseInt(formData.currentStock),
         lowStockAlert: parseInt(formData.lowStockAlert),
-        createdBy: currentUser // Sending user info to DB
+        createdBy: currentUser
       }
 
-      console.log('Payload for submit:', payload)
-
-      // MONITORING LOG DATA
       const logData = {
         user: currentUser,
         timestamp: new Date().toISOString(),
-        // If no _id, it's 'INITIAL', else it's an 'UPDATE'
         type: formData._id ? 'UPDATE' : 'INITIAL_SETUP',
         stockAtEvent: payload.currentStock,
         note: formData._id ? `Manual update by ${currentUser}` : 'Product first entry'
@@ -182,10 +201,8 @@ export default function ProductInventoryList() {
 
       let result
       if (formData._id) {
-        // UPDATE
         result = await window.api.updateProduct(formData._id, { ...payload, logData })
       } else {
-        // CREATE
         result = await window.api.addProduct({ ...payload, logData })
       }
 
@@ -203,7 +220,6 @@ export default function ProductInventoryList() {
     }
   }
 
-  // --- Loading View ---
   if (isInitialLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-slate-950/50 gap-3">
@@ -219,7 +235,6 @@ export default function ProductInventoryList() {
     <div className="flex flex-col h-full bg-slate-950 select-none relative">
       {/* --- HEADER --- */}
       <div className="px-6 py-4 border-b border-slate-900 bg-slate-900/40 flex items-center justify-between gap-6">
-        {/* Search */}
         <div className="relative flex-1 max-w-md group">
           <Search
             size={14}
@@ -243,7 +258,6 @@ export default function ProductInventoryList() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* REFRESH BUTTON */}
           <button
             onClick={() => fetchProducts()}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-500 hover:text-indigo-400 hover:bg-slate-900 transition-all"
@@ -252,7 +266,6 @@ export default function ProductInventoryList() {
             <RefreshCw size={14} />
           </button>
 
-          {/* ADD PRODUCT BUTTON */}
           <button
             onClick={handleAdd}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
@@ -307,7 +320,6 @@ export default function ProductInventoryList() {
                 <th className="pb-2">Category</th>
                 <th className="pb-2 text-right">Unit Price</th>
                 <th className="pb-2 text-center">In Stock</th>
-                {/* <th className="pb-2">createdBy</th> */}
                 <th className="pb-2 text-right pr-4">Actions</th>
               </tr>
             </thead>
@@ -347,10 +359,8 @@ export default function ProductInventoryList() {
                     </div>
                   </td>
 
-                  {/* Action Buttons */}
                   <td className="py-3 text-right rounded-r-2xl pr-4">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {/* VIEW HISTORY BUTTON - Admin Only */}
                       {user?.role == 'Admin' && (
                         <button
                           onClick={() => openProductHistory(product._id)}
@@ -387,7 +397,6 @@ export default function ProductInventoryList() {
       {isModalOpen && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/50">
               <h3 className="text-sm font-black uppercase tracking-widest text-white">
                 {formData._id ? 'Edit Product' : 'Add New Product'}
@@ -399,8 +408,6 @@ export default function ProductInventoryList() {
                 <X size={18} />
               </button>
             </div>
-
-            {/* Modal Form */}
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-1">
@@ -416,7 +423,6 @@ export default function ProductInventoryList() {
                     placeholder="e.g. Iced Vanilla Latte"
                   />
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     Category
@@ -434,7 +440,6 @@ export default function ProductInventoryList() {
                     ))}
                   </select>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     Price (₱)
@@ -448,7 +453,6 @@ export default function ProductInventoryList() {
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                   />
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     Current Stock
@@ -461,7 +465,6 @@ export default function ProductInventoryList() {
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none"
                   />
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     Low Stock Alert
@@ -475,7 +478,6 @@ export default function ProductInventoryList() {
                   />
                 </div>
               </div>
-
               <div className="mt-4 flex justify-end gap-3">
                 <button
                   type="button"
@@ -498,9 +500,9 @@ export default function ProductInventoryList() {
         </div>
       )}
 
-      {/* --- THEMED DELETE CONFIRMATION MODAL --- */}
+      {/* --- DELETE CONFIRMATION MODAL --- */}
       {isDeleteModalOpen && (
-        <div className="absolute inset-0 z-100 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-150">
             <div className="p-8 flex flex-col items-center text-center gap-4">
               <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 mb-2">
@@ -536,7 +538,7 @@ export default function ProductInventoryList() {
 
       {/* --- TAKE OUT ORDER MODAL --- */}
       {isOrderModalOpen && (
-        <div className="absolute inset-0 z-100 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
             {/* Header */}
             <div className="p-6 text-center border-b border-slate-800 bg-slate-800/30">
@@ -592,19 +594,17 @@ export default function ProductInventoryList() {
               <button
                 onClick={() => setIsOrderModalOpen(false)}
                 className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-800 transition-colors"
+                disabled={isProcessingOrder}
               >
                 Cancel
               </button>
               <button
-                onClick={async () => {
-                  // Logic to add to cart/order
-                  // addToCart(selectedOrderProduct, orderQty);
-                  toast.success(`Order added: ${orderQty}x ${selectedOrderProduct.name}`)
-                  setIsOrderModalOpen(false)
-                }}
-                className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 transition-colors border-l border-slate-800"
+                onClick={handleConfirmOrder}
+                disabled={isProcessingOrder}
+                className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 transition-colors border-l border-slate-800 flex justify-center items-center gap-2"
               >
-                Add to Order
+                {isProcessingOrder && <Loader2 className="animate-spin" size={12} />}
+                {isProcessingOrder ? 'PROCESSING...' : 'ADD TO TAKEOUT'}
               </button>
             </div>
           </div>
